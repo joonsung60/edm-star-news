@@ -1,65 +1,81 @@
-import Image from "next/image";
+import Link from 'next/link'
+import { supabase } from '@/lib/supabase'
 
-export default function Home() {
+export const dynamic = 'force-dynamic'
+
+type ArticleListItem = {
+  id: string
+  title: string
+  content: string
+  published: boolean
+  created_at: string
+}
+
+export default async function Home() {
+  const { data, error } = await supabase
+    .from('articles')
+    .select('id, title, content, published, created_at')
+    .order('created_at', { ascending: false })
+
+  const articles = (data ?? []) as ArticleListItem[]
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <div className="min-h-full bg-zinc-50 text-zinc-900">
+      <main className="max-w-3xl mx-auto px-6 py-12">
+        <header className="flex items-baseline justify-between mb-10 pb-6 border-b border-zinc-200">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">EDM Star News</h1>
+            <p className="text-sm text-zinc-500 mt-1">한국어 EDM 뉴스 종합</p>
+          </div>
+          <Link
+            href="/admin"
+            className="text-sm text-zinc-500 hover:text-zinc-900 transition-colors"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+            어드민 →
+          </Link>
+        </header>
+
+        {error && (
+          <div className="p-4 border border-red-300 bg-red-50 rounded text-red-700 text-sm">
+            기사를 불러오지 못했습니다: {error.message}
+          </div>
+        )}
+
+        {!error && articles.length === 0 && (
+          <p className="text-zinc-500">아직 생성된 기사가 없습니다.</p>
+        )}
+
+        <ul className="divide-y divide-zinc-200">
+          {articles.map((article) => (
+            <li key={article.id} className="py-6">
+              <Link href={`/articles/${article.id}`} className="block group">
+                <div className="flex items-center gap-2 mb-2 text-xs text-zinc-500">
+                  <time>{formatDate(article.created_at)}</time>
+                  {!article.published && (
+                    <span className="px-1.5 py-0.5 rounded bg-zinc-200 text-zinc-600">
+                      초안
+                    </span>
+                  )}
+                </div>
+                <h2 className="text-xl font-semibold leading-snug group-hover:underline">
+                  {article.title}
+                </h2>
+                <p className="mt-2 text-sm text-zinc-600 line-clamp-2">
+                  {article.content}
+                </p>
+              </Link>
+            </li>
+          ))}
+        </ul>
       </main>
     </div>
-  );
+  )
+}
+
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString('ko-KR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
 }
