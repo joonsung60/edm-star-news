@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { extractArticleText, extractImageUrl } from '@/lib/article-extraction'
+import { extractArticleText, extractArticleTitle, extractImageUrl, isUrlLikeTitle, titleFromUrl } from '@/lib/article-extraction'
 import Parser from 'rss-parser'
 
 const parser = new Parser()
@@ -50,17 +50,18 @@ async function fetchFeed(url: string) {
   return parser.parseString(text)
 }
 
-async function fetchArticleContent(url: string): Promise<{ content: string; imageUrl: string | null }> {
+async function fetchArticleContent(url: string): Promise<{ content: string; imageUrl: string | null; title: string | null }> {
   try {
     const res = await fetch(url, { headers: REQUEST_HEADERS, signal: AbortSignal.timeout(10000) })
     const html = await res.text()
 
+    const title = extractArticleTitle(html, url)
     const imageUrl = extractImageUrl(html)
     const content = extractArticleText(html, 5000)
 
-    return { content, imageUrl }
+    return { content, imageUrl, title }
   } catch {
-    return { content: '', imageUrl: null }
+    return { content: '', imageUrl: null, title: titleFromUrl(url) }
   }
 }
 
@@ -97,11 +98,15 @@ async function collectFromRSS(): Promise<{ collected: number; failures: CollectF
 
         if (existing) continue
 
-        const { content, imageUrl } = await fetchArticleContent(item.link)
+        const { content, imageUrl, title: extractedTitle } = await fetchArticleContent(item.link)
+        const feedTitle = typeof item.title === 'string' ? item.title.trim() : ''
+        const title = feedTitle && !isUrlLikeTitle(feedTitle)
+          ? feedTitle
+          : extractedTitle ?? titleFromUrl(item.link) ?? '제목 없음'
 
         await supabase.from('raw_articles').insert({
           source_id: source.id,
-          title: item.title || '제목 없음',
+          title,
           content,
           url: item.link,
           image_url: imageUrl,
@@ -140,15 +145,11 @@ async function collectFromUrls(urls: string[]): Promise<number> {
 
       if (existing) continue
 
-      const { content, imageUrl } = await fetchArticleContent(url)
-
-      // 제목 추출 시도
-      const titleMatch = content.match(/^(.{10,100}?)[.!?]/)
-      const title = titleMatch ? titleMatch[1].trim() : url
+      const { content, imageUrl, title } = await fetchArticleContent(url)
 
       await supabase.from('raw_articles').insert({
         source_id: null,
-        title,
+        title: title ?? titleFromUrl(url) ?? '제목 없음',
         content,
         url,
         image_url: imageUrl,

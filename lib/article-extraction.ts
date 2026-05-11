@@ -102,6 +102,74 @@ function getMetaContent(html: string, key: string, value: string): string | null
   return null
 }
 
+function cleanArticleTitle(title: string): string {
+  return decodeHtmlEntities(title)
+    .replace(/\s+/g, ' ')
+    .replace(/\s+[-|–—]\s+(Bandcamp Daily|Beatportal|Attack Magazine|Inverted Audio|Mixmag|DJ Mag)$/i, '')
+    .trim()
+}
+
+function isBadPageTitle(title: string): boolean {
+  return /^(page not found|not found|404|403|forbidden|access denied)\b/i.test(title.trim())
+}
+
+export function isUrlLikeTitle(title: string): boolean {
+  const trimmed = title.trim().toLowerCase()
+  return /^https?:\/\//.test(trimmed)
+    || /^www\./.test(trimmed)
+    || /\bhttps?\b/.test(trimmed)
+    || /\bwww\b/.test(trimmed)
+    || /\b[a-z0-9-]+\.(com|net|org|co|uk|de|fr|io|fm)\b/.test(trimmed)
+}
+
+export function titleFromUrl(url: string): string | null {
+  try {
+    const parsed = new URL(url)
+    const slug = parsed.pathname
+      .split('/')
+      .filter(Boolean)
+      .pop()
+
+    if (!slug) {
+      return null
+    }
+
+    const title = slug
+      .replace(/\.[a-z0-9]+$/i, '')
+      .replace(/[-_]+/g, ' ')
+      .replace(/\b\w/g, (char) => char.toUpperCase())
+      .trim()
+
+    return title.length >= 8 ? title : null
+  } catch {
+    return null
+  }
+}
+
+export function extractArticleTitle(html: string, fallbackUrl?: string): string | null {
+  const ogTitle = getMetaContent(html, 'property', 'og:title')
+  const twitterTitle = getMetaContent(html, 'name', 'twitter:title')
+  const h1Match = html.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/i)
+  const titleMatch = html.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i)
+
+  const candidates = [
+    ogTitle,
+    twitterTitle,
+    h1Match ? stripHtmlToText(h1Match[1]) : null,
+    titleMatch ? stripHtmlToText(titleMatch[1]) : null,
+  ]
+
+  for (const candidate of candidates) {
+    if (!candidate) continue
+    const title = cleanArticleTitle(candidate)
+    if (title.length >= 8 && !isUrlLikeTitle(title) && !isBadPageTitle(title)) {
+      return title.slice(0, 220)
+    }
+  }
+
+  return fallbackUrl ? titleFromUrl(fallbackUrl) : null
+}
+
 export function extractImageUrl(html: string): string | null {
   return getMetaContent(html, 'property', 'og:image')
     ?? getMetaContent(html, 'name', 'twitter:image')

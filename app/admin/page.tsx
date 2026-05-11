@@ -1,8 +1,9 @@
 'use client'
 
+import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 
-type Tab = 'collect' | 'add-urls' | 'suggest' | 'cluster' | 'generate'
+type Tab = 'collect' | 'add-urls' | 'suggest' | 'articles' | 'cluster' | 'generate'
 
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<Tab>('collect')
@@ -17,8 +18,9 @@ export default function AdminPage() {
           { id: 'collect', label: '① RSS 수집' },
           { id: 'add-urls', label: '② URL 직접 추가' },
           { id: 'suggest', label: '③ 자동 토픽 제안' },
-          { id: 'cluster', label: '④ 클러스터 (수동)' },
-          { id: 'generate', label: '⑤ 기사 생성 (수동)' },
+          { id: 'articles', label: '④ 생성 기사 검토' },
+          { id: 'cluster', label: '⑤ 클러스터 (수동)' },
+          { id: 'generate', label: '⑥ 기사 생성 (수동)' },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -38,6 +40,7 @@ export default function AdminPage() {
       {activeTab === 'collect' && <CollectTab />}
       {activeTab === 'add-urls' && <AddUrlsTab />}
       {activeTab === 'suggest' && <SuggestTab />}
+      {activeTab === 'articles' && <ArticlesReviewTab />}
       {activeTab === 'cluster' && <ClusterTab />}
       {activeTab === 'generate' && <GenerateTab />}
     </div>
@@ -215,6 +218,16 @@ type PersistedSuggestion = {
 
 type ProcessingState = { state: 'pending' | 'success' | 'error'; message: string }
 
+type AdminArticle = {
+  id: string
+  title: string
+  content: string
+  published: boolean
+  published_at: string | null
+  created_at: string
+  cluster_id: string | null
+}
+
 type GenerateResult = {
   success: boolean
   article?: {
@@ -391,13 +404,13 @@ function SuggestTab() {
     subTab === 'pending'
       ? '대기 중인 제안이 없습니다. 위 버튼으로 새 제안을 받아보세요.'
       : subTab === 'published'
-      ? '발행된 제안이 아직 없습니다.'
+      ? '기사 생성 완료된 제안이 아직 없습니다.'
       : '거절된 제안이 없습니다.'
 
   return (
     <div>
       <p className="text-gray-600 mb-6">
-        최근 미사용 raw 기사를 LLM이 분석해 토픽 그룹을 제안합니다. 제안은 DB에 저장되며 승인/거절로 관리됩니다.
+        최근 미사용 raw 기사를 LLM이 분석해 토픽 그룹을 제안합니다. 승인하면 기사 초안이 생성되고, 게시는 다음 탭에서 검토 후 진행합니다.
       </p>
 
       <div className="mb-6 flex flex-wrap items-center gap-3">
@@ -414,7 +427,7 @@ function SuggestTab() {
       <div className="flex gap-2 mb-4 border-b text-sm">
         {[
           { id: 'pending', label: '미처리' },
-          { id: 'published', label: '발행됨' },
+          { id: 'published', label: '기사 생성 완료' },
           { id: 'rejected', label: '거절됨' },
         ].map((tab) => (
           <button
@@ -487,7 +500,7 @@ function SuggestTab() {
 
                   {subTab === 'published' && s.clusterId && (
                     <span className="px-3 py-2 border border-gray-300 text-gray-600 text-sm rounded whitespace-nowrap">
-                      클러스터 저장됨
+                      기사 초안 생성됨
                     </span>
                   )}
                 </div>
@@ -529,6 +542,276 @@ function SuggestTab() {
                   </p>
                 )}
               </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+type ArticleReviewSubTab = 'draft' | 'published'
+
+function ArticlesReviewTab() {
+  const [subTab, setSubTab] = useState<ArticleReviewSubTab>('draft')
+  const [articles, setArticles] = useState<AdminArticle[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [processing, setProcessing] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editTitle, setEditTitle] = useState('')
+  const [editContent, setEditContent] = useState('')
+  const [error, setError] = useState('')
+  const [message, setMessage] = useState('')
+
+  const load = useCallback(async (tab: ArticleReviewSubTab) => {
+    setIsLoading(true)
+    setError('')
+    setMessage('')
+
+    try {
+      const res = await fetch(`/api/articles?published=${tab === 'published'}&limit=50`)
+      const data = await res.json()
+
+      if (data.error) {
+        setError(data.error)
+        setArticles([])
+      } else {
+        setArticles((data.articles ?? []) as AdminArticle[])
+      }
+    } catch {
+      setError('기사 목록을 불러오지 못했습니다.')
+      setArticles([])
+    }
+
+    setIsLoading(false)
+  }, [])
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    load(subTab)
+  }, [subTab, load])
+
+  const handlePublish = async (article: AdminArticle) => {
+    setProcessing(article.id)
+    setError('')
+    setMessage('')
+
+    try {
+      const res = await fetch(`/api/articles/${article.id}/publish`, {
+        method: 'PATCH',
+      })
+      const data = await res.json()
+
+      if (data.error) {
+        setError(data.error)
+      } else {
+        setMessage(`게시 완료: ${data.article?.title ?? article.title}`)
+        await load(subTab)
+      }
+    } catch {
+      setError('게시 중 오류가 발생했습니다.')
+    }
+
+    setProcessing(null)
+  }
+
+  const startEdit = (article: AdminArticle) => {
+    setEditingId(article.id)
+    setEditTitle(article.title)
+    setEditContent(article.content)
+    setError('')
+    setMessage('')
+  }
+
+  const cancelEdit = () => {
+    setEditingId(null)
+    setEditTitle('')
+    setEditContent('')
+  }
+
+  const handleSaveEdit = async (article: AdminArticle) => {
+    setProcessing(article.id)
+    setError('')
+    setMessage('')
+
+    try {
+      const res = await fetch(`/api/articles/${article.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: editTitle, content: editContent }),
+      })
+      const data = await res.json()
+
+      if (data.error) {
+        setError(data.error)
+      } else {
+        setMessage(`수정 완료: ${data.article?.title ?? editTitle}`)
+        cancelEdit()
+        await load(subTab)
+      }
+    } catch {
+      setError('수정 중 오류가 발생했습니다.')
+    }
+
+    setProcessing(null)
+  }
+
+  const handleDelete = async (article: AdminArticle) => {
+    const ok = window.confirm(`이 기사 초안을 삭제할까요?\n\n${article.title}`)
+    if (!ok) return
+
+    setProcessing(article.id)
+    setError('')
+    setMessage('')
+
+    try {
+      const res = await fetch(`/api/articles/${article.id}`, {
+        method: 'DELETE',
+      })
+      const data = await res.json()
+
+      if (data.error) {
+        setError(data.error)
+      } else {
+        setMessage(`삭제 완료: ${data.article?.title ?? article.title}`)
+        await load(subTab)
+      }
+    } catch {
+      setError('삭제 중 오류가 발생했습니다.')
+    }
+
+    setProcessing(null)
+  }
+
+  const emptyMessage =
+    subTab === 'draft'
+      ? '게시 대기 중인 기사 초안이 없습니다.'
+      : '게시된 기사가 아직 없습니다.'
+
+  return (
+    <div>
+      <p className="text-gray-600 mb-6">
+        자동 토픽 제안에서 생성된 기사 초안을 검토한 뒤, 공개 뉴스 사이트에 노출할 기사를 게시합니다.
+      </p>
+
+      <div className="flex gap-2 mb-4 border-b text-sm">
+        {[
+          { id: 'draft', label: '게시 대기' },
+          { id: 'published', label: '게시됨' },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setSubTab(tab.id as ArticleReviewSubTab)}
+            className={`px-3 py-2 font-medium border-b-2 transition-colors ${
+              subTab === tab.id
+                ? 'border-black text-black'
+                : 'border-transparent text-gray-400 hover:text-gray-600'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {message && <p className="text-green-600 mb-4">{message}</p>}
+      {error && <p className="text-red-500 mb-4">{error}</p>}
+      {isLoading && <p className="text-gray-500">불러오는 중...</p>}
+
+      {!isLoading && articles.length === 0 && !error && (
+        <p className="text-gray-500">{emptyMessage}</p>
+      )}
+
+      {!isLoading && articles.length > 0 && (
+        <div className="space-y-4">
+          {articles.map((article) => {
+            const isEditing = editingId === article.id
+            return (
+              <article key={article.id} className="border rounded p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-gray-500">
+                      <span>{article.published ? '게시일' : '생성일'} {formatDate(article.published_at ?? article.created_at)}</span>
+                      {article.cluster_id && <span>cluster {article.cluster_id}</span>}
+                    </div>
+
+                    {isEditing ? (
+                      <div className="space-y-3">
+                        <input
+                          className="w-full rounded border p-3 text-lg font-semibold"
+                          value={editTitle}
+                          onChange={(e) => setEditTitle(e.target.value)}
+                        />
+                        <textarea
+                          className="h-72 w-full rounded border p-3 text-sm leading-6"
+                          value={editContent}
+                          onChange={(e) => setEditContent(e.target.value)}
+                        />
+                      </div>
+                    ) : (
+                      <>
+                        <h3 className="text-lg font-semibold leading-snug">{article.title}</h3>
+                        <p className="mt-2 text-sm text-gray-600 line-clamp-3">{article.content}</p>
+                      </>
+                    )}
+                  </div>
+
+                  <div className="flex shrink-0 gap-2">
+                    {isEditing ? (
+                      <>
+                        <button
+                          onClick={() => handleSaveEdit(article)}
+                          disabled={processing !== null}
+                          className="px-3 py-2 bg-black text-white text-sm rounded font-semibold disabled:opacity-50 whitespace-nowrap"
+                        >
+                          {processing === article.id ? '저장 중...' : '저장'}
+                        </button>
+                        <button
+                          onClick={cancelEdit}
+                          disabled={processing !== null}
+                          className="px-3 py-2 border border-gray-300 text-gray-600 text-sm rounded font-semibold hover:bg-gray-50 disabled:opacity-50 whitespace-nowrap"
+                        >
+                          취소
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <Link
+                          href={`/articles/${article.id}`}
+                          target="_blank"
+                          className="px-3 py-2 border border-gray-300 text-gray-600 text-sm rounded font-semibold hover:bg-gray-50 whitespace-nowrap"
+                        >
+                          검토
+                        </Link>
+                        {subTab === 'draft' && (
+                          <>
+                            <button
+                              onClick={() => startEdit(article)}
+                              disabled={processing !== null || editingId !== null}
+                              className="px-3 py-2 border border-gray-300 text-gray-600 text-sm rounded font-semibold hover:bg-gray-50 disabled:opacity-50 whitespace-nowrap"
+                            >
+                              수정
+                            </button>
+                            <button
+                              onClick={() => handlePublish(article)}
+                              disabled={processing !== null || editingId !== null}
+                              className="px-3 py-2 bg-black text-white text-sm rounded font-semibold disabled:opacity-50 whitespace-nowrap"
+                            >
+                              {processing === article.id ? '게시 중...' : '게시'}
+                            </button>
+                            <button
+                              onClick={() => handleDelete(article)}
+                              disabled={processing !== null || editingId !== null}
+                              className="px-3 py-2 border border-red-300 text-red-600 text-sm rounded font-semibold hover:bg-red-50 disabled:opacity-50 whitespace-nowrap"
+                            >
+                              {processing === article.id ? '처리 중...' : '삭제'}
+                            </button>
+                          </>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+              </article>
             )
           })}
         </div>
@@ -590,4 +873,14 @@ function GenerateTab() {
       )}
     </div>
   )
+}
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat('ko-KR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(value))
 }
