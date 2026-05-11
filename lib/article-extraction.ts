@@ -3,6 +3,16 @@ const BOILERPLATE_PATTERNS = [
   /\b(share|email|facebook|twitter|reddit|pinterest|whatsapp|telegram)\b/gi,
   /\b(previous article|next article|related articles|more from author|comments are closed)\b/gi,
   /\b(sign up|subscribe|tags|just released|claim this offer|read more)\b/gi,
+  /\b(news tracks features mixes events genres)\b/gi,
+  /\b(acid house ambient music balearica deep house disco\/edits electronica garage house soulful house synth tech house techno uk garage)\b/gi,
+  /\b(deep house tracks reviews|tracks reviews|features mixes events)\b/gi,
+]
+
+const STOP_SECTION_PATTERNS = [
+  /\b(previous article|next article)\b/i,
+  /\b(related articles|more from author)\b/i,
+  /\b(comments are closed|just released)\b/i,
+  /\b(sign up|subscribe)\b/i,
 ]
 
 function decodeHtmlEntities(text: string): string {
@@ -41,8 +51,20 @@ function stripHtmlToText(html: string): string {
     .trim()
 }
 
-function removeBoilerplate(text: string): string {
-  let cleaned = text
+export function cleanArticleText(text: string, maxLength = 5000): string {
+  const stopIndex = STOP_SECTION_PATTERNS
+    .map((pattern) => text.search(pattern))
+    .filter((index) => index >= 0)
+    .sort((a, b) => a - b)[0]
+
+  let cleaned = stopIndex === undefined ? text : text.slice(0, stopIndex)
+
+  // Some sources store a full-page text dump on a single line. Restore light
+  // boundaries around common article markers before filtering line-by-line.
+  cleaned = cleaned
+    .replace(/\b(By [A-Z][A-Za-z .'-]+ - [A-Z][a-z]+ \d{1,2}, \d{4})\b/g, '\n$1\n')
+    .replace(/\b(Tracklisting|Disclosure Statement|Previous Coverage)\b/gi, '\n$1\n')
+
   for (const pattern of BOILERPLATE_PATTERNS) {
     cleaned = cleaned.replace(pattern, ' ')
   }
@@ -54,7 +76,12 @@ function removeBoilerplate(text: string): string {
     .filter((line) => !/^(news|tracks|features|mixes|events|genres)$/i.test(line))
     .join('\n')
     .replace(/[ \t\f\v]+/g, ' ')
+    .slice(0, maxLength)
     .trim()
+}
+
+function removeBoilerplate(text: string): string {
+  return cleanArticleText(text)
 }
 
 function getMetaContent(html: string, key: string, value: string): string | null {

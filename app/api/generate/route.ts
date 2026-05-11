@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { extractArticleText } from '@/lib/article-extraction'
+import { cleanArticleText, extractArticleText } from '@/lib/article-extraction'
 import { SYSTEM_PROMPT_A } from '@/lib/prompts'
 
 type SourceArticle = {
@@ -32,10 +32,7 @@ const RESPONSE_NOISE_PATTERNS = [
 ]
 
 function compactSourceText(text: string): string {
-  return text
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 2500)
+  return cleanArticleText(text, 2500).replace(/\s+/g, ' ').trim()
 }
 
 async function fetchArticleContent(url: string): Promise<string> {
@@ -114,6 +111,10 @@ async function generateKoreanArticle(articles: SourceArticle[]): Promise<Generat
   let lastError = '생성 실패'
 
   for (let attempt = 1; attempt <= 2; attempt++) {
+    const retryGuidance = attempt > 1
+      ? `\n이전 응답은 검증에 실패했습니다. 실패 이유: ${lastError}\n이번에는 영어 원문과 사이트 메뉴 문구를 절대 포함하지 말고, 자연스러운 한국어 기사만 작성하세요.\n`
+      : ''
+
     const res = await fetch(`${ollamaUrl}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -128,6 +129,7 @@ async function generateKoreanArticle(articles: SourceArticle[]): Promise<Generat
 - 출력은 반드시 JSON 객체 하나만 허용됩니다.
 - JSON 키는 "title", "content" 두 개만 사용하세요.
 - title과 content 값은 한국어 기사체로 작성하세요.
+${retryGuidance}
 
 ${articlesText}
 
@@ -206,14 +208,19 @@ export async function POST(req: NextRequest) {
           const content = article.content || await fetchArticleContent(article.url)
           return {
             title: article.title || '제목 없음',
-            content,
+            content: cleanArticleText(content, 3000),
             source: article.url,
           }
         })
       )
+      const usableArticles = articlesWithContent.filter((article) => article.content.length >= 80)
+
+      if (usableArticles.length === 0) {
+        throw new Error('생성에 사용할 수 있는 원문 본문이 없습니다.')
+      }
 
       // 한국어 종합 기사 생성
-      const { title, content } = await generateKoreanArticle(articlesWithContent)
+      const { title, content } = await generateKoreanArticle(usableArticles)
 
       // articles 테이블에 저장
       const { data, error } = await supabase

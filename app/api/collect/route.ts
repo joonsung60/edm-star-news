@@ -4,17 +4,55 @@ import { extractArticleText, extractImageUrl } from '@/lib/article-extraction'
 import Parser from 'rss-parser'
 
 const parser = new Parser()
-const { data: sources, error } = await supabase
-  .from('rss_sources')
-  .select('*')
-  .eq('is_active', true)
+const RSS_TIMEOUT_MS = 12000
+const REQUEST_HEADERS = {
+  'Accept': 'application/rss+xml, application/xml, text/xml, */*',
+  'User-Agent': 'Mozilla/5.0 EDM Star News RSS Collector',
+}
 
-console.log('sources:', sources)
-console.log('error:', error)
+type RssSource = {
+  id: string
+  name: string
+  url: string
+}
+
+type CollectFailure = {
+  source: string
+  url: string
+  error: string
+}
+
+function parsePublishedAt(value: unknown): string | null {
+  if (typeof value !== 'string' || value.trim().length === 0) {
+    return null
+  }
+
+  const normalized = value
+    .replace(/\bBST\b/g, '+0100')
+    .replace(/\bGMT\b/g, '+0000')
+    .replace(/\bUTC\b/g, '+0000')
+  const date = new Date(normalized)
+
+  return Number.isNaN(date.getTime()) ? null : date.toISOString()
+}
+
+async function fetchFeed(url: string) {
+  const res = await fetch(url, {
+    headers: REQUEST_HEADERS,
+    signal: AbortSignal.timeout(RSS_TIMEOUT_MS),
+  })
+  const text = await res.text()
+
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}: ${text.slice(0, 120).replace(/\s+/g, ' ')}`)
+  }
+
+  return parser.parseString(text)
+}
 
 async function fetchArticleContent(url: string): Promise<{ content: string; imageUrl: string | null }> {
   try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(10000) })
+    const res = await fetch(url, { headers: REQUEST_HEADERS, signal: AbortSignal.timeout(10000) })
     const html = await res.text()
 
     const imageUrl = extractImageUrl(html)
@@ -27,7 +65,7 @@ async function fetchArticleContent(url: string): Promise<{ content: string; imag
 }
 
 // RSS 자동 수집
-async function collectFromRSS(): Promise<number> {
+async function collectFromRSS(): Promise<{ collected: number; failures: CollectFailure[] }> {
   const { data: sources } = await supabase
     .from('rss_sources')
     .select('*')
@@ -35,16 +73,17 @@ async function collectFromRSS(): Promise<number> {
 
   if (!sources) {
     console.log('소스 없음')
-    return 0
+    return { collected: 0, failures: [] }
   }
 
   console.log(`소스 ${sources.length}개 발견`)
   let collected = 0
+  const failures: CollectFailure[] = []
 
-  for (const source of sources) {
+  for (const source of sources as RssSource[]) {
     try {
       console.log(`파싱 시도: ${source.name} - ${source.url}`)
-      const feed = await parser.parseURL(source.url)
+      const feed = await fetchFeed(source.url)
       console.log(`파싱 성공: ${source.name} - ${feed.items.length}개 아이템`)
 
       for (const item of feed.items.slice(0, 10)) {
@@ -67,7 +106,7 @@ async function collectFromRSS(): Promise<number> {
           url: item.link,
           image_url: imageUrl,
           author: item.creator || null,
-          published_at: item.pubDate ? new Date(item.pubDate).toISOString() : null,
+          published_at: parsePublishedAt(item.pubDate || item.isoDate),
         })
 
         collected++
@@ -80,10 +119,11 @@ async function collectFromRSS(): Promise<number> {
 
     } catch (err) {
       console.error(`RSS 실패: ${source.name}`, err)
+      failures.push({ source: source.name, url: source.url, error: String(err) })
     }
   }
 
-  return collected
+  return { collected, failures }
 }
 
 // URL 직접 추가
@@ -131,12 +171,12 @@ export async function POST(req: NextRequest) {
 
     console.log('수집 시작:', urls ? `URL ${urls.length}개` : 'RSS 모드')
 
-    const collected = urls && urls.length > 0
-      ? await collectFromUrls(urls)
+    const result = urls && urls.length > 0
+      ? { collected: await collectFromUrls(urls), failures: [] }
       : await collectFromRSS()
 
-    console.log('수집 완료:', collected)
-    return NextResponse.json({ success: true, collected })
+    console.log('수집 완료:', result.collected)
+    return NextResponse.json({ success: true, collected: result.collected, failures: result.failures })
   } catch (err) {
     console.error('collect API 에러:', err)
     return NextResponse.json({ success: false, error: String(err) }, { status: 500 })

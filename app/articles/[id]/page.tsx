@@ -62,8 +62,10 @@ export default async function ArticlePage({
             {article.title}
           </h1>
 
-          <div className="text-base leading-relaxed text-zinc-800 whitespace-pre-wrap">
-            {article.content}
+          <div className="text-base leading-relaxed text-zinc-800 space-y-4">
+            {splitKoreanSentences(article.content).map((sentence, idx) => (
+              <p key={idx}>{sentence}</p>
+            ))}
           </div>
         </article>
       </main>
@@ -80,6 +82,14 @@ function BackLink() {
       ← 목록으로
     </Link>
   )
+}
+
+function splitKoreanSentences(text: string): string[] {
+  if (!text?.trim()) return []
+  return text
+    .split(/(?<=[다요까네죠][.!?])\s+/)
+    .map((s) => s.trim())
+    .filter(Boolean)
 }
 
 function formatDate(iso: string) {
