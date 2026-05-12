@@ -9,7 +9,9 @@
 핵심 흐름:
 
 1. 원문 수집: RSS 또는 URL 직접 추가
-2. 자동 토픽 제안: 여러 raw article 중 같은 사건/릴리즈/행사/인물/제품으로 묶을 후보를 LLM이 제안
+2. 자동 토픽 제안 (2단계):
+   - Stage 1: 코드가 `lib/edm-entities.json`(아티스트 500 + 페스티벌 140 + 레이블 117)을 사전으로 raw article에서 엔터티 매칭 → 후보 클러스터 생성 (단독 기사도 가능)
+   - Stage 2: 후보마다 LLM(qwen3:14b)에 "한국어 EDM 기사로 작성할 가치가 있는가?" 질의 → 승인된 것만 저장
 3. 인간 검토: 제안 승인 또는 거절
 4. 기사 생성: 승인된 토픽으로 한국어 기사 초안 생성
 5. 인간 검토: 초안 수정/삭제/게시
@@ -24,7 +26,7 @@
 - Ollama `qwen3:14b` 사용
 - Windows Ollama를 WSL에서 `OLLAMA_BASE_URL=http://172.25.224.1:11434`로 호출
 - Supabase에 raw article, cluster, generated article 저장
-- `/admin/*`은 `middleware.ts`와 쿠키 세션으로 보호
+- `/admin/*`은 `proxy.ts`(Next.js 16에서 middleware의 새 이름)와 HMAC 쿠키 세션으로 보호
 
 ### 공개 사이트
 
@@ -39,8 +41,8 @@
 - 기사 생성과 관리는 로컬에서 한다.
 - 공개 사이트는 정적 뉴스 사이트로만 사용한다.
 - 배포본에 `/admin`을 포함할지 여부는 아직 보안상 의사결정이 필요하다.
-  - 현재 안전 조치로 `scripts/build-static.mjs`는 `app/admin`, `app/api`, `middleware.ts/proxy.ts`를 정적 빌드에서 제외하는 방향이어야 한다.
-  - 정적 배포에서 `/admin`을 포함하고 진짜 인증을 원하면 Cloudflare Access 같은 외부 보호가 필요하다.
+  - 현재 `scripts/build-static.mjs`는 `app/admin`, `app/api`, `proxy.ts` 셋 다 정적 빌드 전에 stash로 제외한다. 즉 배포본에는 `/admin`이 없다.
+  - 정적 배포에 `/admin`을 다시 포함하고 진짜 인증을 원하면 Cloudflare Access 같은 외부 보호가 필요하다.
   - 클라이언트 비밀번호 화면은 우회 가능하므로 진짜 보안으로 보지 않는다.
 
 ## 3. 기술 스택
@@ -54,9 +56,10 @@
 
 Next.js 16 관련 주의:
 
-- 현재 프로젝트는 `middleware.ts`를 사용한다.
+- Next.js 16에서 `middleware.ts`가 `proxy.ts`로 이름이 바뀌었다(함수명도 `middleware` → `proxy`). 이 프로젝트는 `proxy.ts`를 사용한다.
 - 동적 route handler의 `params`는 Promise로 처리한다.
-- 정적 export에서는 middleware/API routes가 실행되지 않는다.
+- 정적 export에서는 proxy/API routes가 실행되지 않는다.
+- Turbopack은 `output:'export'`를 silently 무시한다. 정적 빌드는 `next build --webpack`을 강제한다. `npm run dev`도 `--webpack`을 사용하도록 설정돼 있다.
 
 ## 4. 주요 DB 테이블
 
@@ -140,21 +143,22 @@ RSS 소스 목록.
 ## 5. 주요 파일과 역할
 
 ```txt
-middleware.ts
-  로컬 /admin/* 보호. ADMIN_PASSWORD 기반 쿠키 세션 확인.
+proxy.ts
+  Next.js 16 proxy(구 middleware). 로컬 /admin/* 보호. HMAC admin_session 쿠키 검증.
 
 lib/admin-session.ts
-  HMAC 기반 admin_session 쿠키 sign/verify.
+  HMAC-SHA256 기반 admin_session 쿠키 sign/verify (Web Crypto).
 
 next.config.ts
   BUILD_STATIC=1일 때 output:'export', trailingSlash, images.unoptimized 설정.
 
 scripts/build-static.mjs
   Cloudflare Pages 정적 빌드 스크립트.
-  정적 export와 충돌하는 admin/api/middleware 계층을 임시 stash한 뒤 next build --webpack 실행.
+  app/admin, app/api, proxy.ts를 .cf-build-stash로 임시 이동 → next build --webpack → 복원.
+  현재 app/admin도 stash 대상이라 배포본에는 어드민 UI 자체가 없다.
 
 app/layout.tsx
-  사이트 공통 헤더와 네비게이션. 정적 빌드에서는 어드민 링크를 숨기는 방향이 안전하다.
+  사이트 공통 헤더와 네비게이션.
 
 app/page.tsx
   공개 홈. published 기사 최대 20개를 published_at desc로 표시.
@@ -163,66 +167,83 @@ app/page.tsx
 app/articles/[id]/page.tsx
   공개 기사 상세. generateStaticParams로 published 기사만 정적 생성.
 
+app/robots.ts
+  /robots.txt. 모든 경로 허용 + sitemap URL 명시.
+
+app/sitemap.ts
+  /sitemap.xml. articles 테이블에서 ID로 URL 생성. **작업 중**: import 경로
+  `@/utils/supabase/server`가 아직 존재하지 않아 타입체크가 깨진 상태다.
+
 app/admin/page.tsx
-  로컬 어드민 UI. 6개 탭.
+  로컬 어드민 UI. 6개 탭. RSS 수집 탭은 is_active=true인 소스 수를 클라이언트에서
+  Supabase로 직접 조회해 동적으로 표시.
 
 app/admin/login/page.tsx
   어드민 로그인 폼.
 
 app/api/admin/login/route.ts
-  ADMIN_PASSWORD 검증, 쿠키 발급, IP 기반 실패 제한.
+  ADMIN_PASSWORD 검증, 쿠키 발급, IP 기반 실패 제한(5회 / 15분, in-memory).
 
 app/api/collect/route.ts
-  RSS 수집과 URL 직접 추가.
+  RSS 수집과 URL 직접 추가. 제목/본문/이미지 추출.
 
 app/api/suggest-clusters/route.ts
-  자동 토픽 제안 생성/조회.
+  자동 토픽 제안 생성/조회. 2단계 구조(엔터티 매칭 → LLM 가치 평가).
+  entity dict 로드 실패 시 단일 LLM 경로로 fallback.
 
 app/api/suggest-clusters/[id]/route.ts
-  토픽 제안 상태 업데이트.
+  토픽 제안 status/cluster_id PATCH.
 
 app/api/cluster/route.ts
-  클러스터 생성.
+  articleIds 또는 keywords 기반 클러스터 생성. matchMode or/and 지원.
 
 app/api/generate/route.ts
-  한국어 기사 생성.
+  한국어 기사 생성. 클러스터 원문을 정제 후 Qwen3에 전달.
 
 app/api/articles/route.ts
-  생성 기사 목록 조회.
+  생성 기사 목록 조회. published 필터 지원.
 
 app/api/articles/[id]/route.ts
-  게시 전 기사 초안 수정/삭제.
+  게시 전 기사 초안 PATCH 수정 / DELETE 삭제. published=true 기사는 차단.
 
 app/api/articles/[id]/publish/route.ts
-  기사 게시 처리. published=true, published_at=now() 업데이트 후 Cloudflare deploy hook 호출.
+  published=true, published_at=now() 업데이트 후 CLOUDFLARE_DEPLOY_HOOK_URL로
+  fire-and-forget POST.
 
 app/api/raw-articles/backfill-titles/route.ts
   과거 URL형 title 데이터를 재추출/보정하기 위한 backfill API.
 
 lib/article-extraction.ts
-  HTML 제목/본문/이미지 추출과 텍스트 정제.
+  HTML 제목/본문/이미지 추출과 텍스트 정제(cleanArticleText).
 
 lib/prompts.ts
-  기사 생성 시스템 프롬프트. 상대 날짜 표현 금지 규칙 포함.
+  SYSTEM_PROMPT_A — 기사 생성 시스템 프롬프트. 상대 날짜 표현 금지 + 고유명사
+  표기 규칙(영문 기본, 한국 정착 표기만 예외, 임의 한글 음역 절대 금지) 포함.
+  SYSTEM_PROMPT_B — 미작성.
 
 lib/edm-entities.json
-  EDM 관련 entity/키워드 사전 데이터.
+  EDM 엔터티 사전. artists_top500_relevance_2024_2025(500),
+  major_edm_festivals_worldwide(140), edm_labels_key_artists(117).
+  실제 파일명은 'lib/ edm-entities.json'(선행 공백). suggest-clusters 코드가 여러
+  후보 경로를 시도한다.
 ```
 
 ## 6. 어드민 UI 탭
 
 1. **RSS 수집**
    - 등록 RSS 소스에서 새 기사 수집
+   - is_active=true인 소스 수를 실시간 조회해 "N개 RSS 소스에서 ..." 표기
    - 실패 소스 표시
 
 2. **URL 직접 추가**
    - URL을 줄 단위로 넣어 원문 수집
 
 3. **자동 토픽 제안**
-   - 최근 미사용 raw article을 LLM이 분석
-   - 같은 사건/릴리즈/행사/인물/제품 후보만 제안
-   - 승인 시 클러스터 생성과 기사 생성까지 이어짐
-   - 거절 가능
+   - 최근 raw article(published_at desc, 최대 500개)에서 엔터티 사전 매칭
+   - 매칭된 엔터티 가중치 합 >= 0.6인 후보 클러스터 생성(단독 기사 포함)
+   - 각 후보를 LLM에 가치 질의 → 승인된 것만 저장
+   - 승인 시 인간이 다시 "승인 & 기사 생성" 또는 "거절"
+   - "승인 & 기사 생성" 클릭하면 클러스터 생성 + 기사 생성까지 자동 진행
 
 4. **생성 기사 검토**
    - 생성된 초안 목록 확인
@@ -238,21 +259,55 @@ lib/edm-entities.json
 
 ## 7. 자동 토픽 제안 정책
 
-현재 목표는 "같은 단어가 있는 기사 묶음"이 아니라 "하나의 한국어 기사로 합칠 수 있는 같은 사건/릴리즈/행사/인물/제품 후보"를 찾는 것이다.
+목표는 "한국어 EDM 뉴스 기사로 작성할 가치가 있는 raw article 후보를 찾는 것". 단독 기사여도 구체적 사건/릴리즈/행사/인물/제품을 다루면 통과한다.
 
-현재 반영된 정책:
+### 2단계 구조
 
-- 넓은 카테고리 단어만 공유하는 묶음 금지
-  - 예: festival, techno, house, release, new music
-- 매체명/사이트명/연도 단독/시리즈명으로 묶는 것 금지
-  - 예: 909originals, IA MIX, 2025 관련 소식
-- 인터뷰 형식 문구로 묶는 것 금지
-  - 예: catches up with, chats to
-- 후보 발굴 단계라 너무 보수적이면 안 됨
-- 기본 분석 기사 수는 100개
-- 최대 분석 기사 수는 150개
-- 응집도 최소 기준은 현재 20
-- 모든 소스를 동등하게 취급한다.
+**Stage 1 — 코드 기반 후보 클러스터 생성 (`buildCandidateClusters`):**
+
+- `lib/edm-entities.json` 로드: 아티스트(weight 1.0, name+aliases), 페스티벌(weight 1.0, name), 레이블(weight 0.6, name).
+- 각 raw article에 대해 title + content 첫 200자 lowercase에서 entity surface를 word-boundary로 매칭.
+- 역인덱스 (entity → article ids) 구축 후 같은 entity를 공유하는 기사 묶음을 후보 클러스터로 생성. 단독 기사도 후보가 된다.
+- 동일 articleIds 집합은 dedupe.
+- 필터: 후보의 shared entity weight sum >= 0.6 (단일 아티스트=1.0, 단일 페스티벌=1.0, 단일 레이블=0.6 모두 통과).
+- ~~기사 수 < 2 필터~~, ~~도메인 다양성 필터~~, ~~72시간 freshness 필터~~ — 모두 제거됨.
+
+**Stage 2 — 후보별 LLM 가치 평가 (`approveCandidateWithLlm`):**
+
+- 후보 1개당 Ollama 호출 1회 (순차 처리).
+- system prompt(`SUGGEST_SYSTEM`)가 카테고리/매체명/연도/인터뷰 패턴 거부 규칙을 강제.
+- user prompt는 "이 기사가 한국어 EDM 뉴스 기사로 작성할 만한 가치가 있는가? yes면 topic과 keywords 반환, no면 approved: false 반환".
+- Ollama `format` 파라미터로 `{approved, topic?, keywords?, reason?}` 스키마 강제.
+- approved=true만 `normalizeSuggestion`에 전달.
+
+**`normalizeSuggestion` 후검증:**
+
+- 빈 topic 거절. topic이 URL/도메인/매체-시리즈명/low-signal 패턴이면 거절.
+- articleIds 수 >= 1이어야 통과 (단독 기사 허용).
+- Stage 2 승인 후보는 cohesionScore=50을 강제 부여 (MIN_COHESION_SCORE=20 통과).
+- keywords와 commonEntities가 모두 비면 거절.
+
+**Fallback:** entity dict 로드 실패 시 `runLlmOnlyPath`로 빠짐. 기존 단일 LLM 호출(`{suggestions:[...]}` 다건 반환) 흐름 유지. 응답에 `source: 'llm'`.
+
+### 정책 상수
+
+- DEFAULT_ANALYSIS_LIMIT = MAX_ANALYSIS_LIMIT = 500 (Supabase에서 가져오는 raw article 상한)
+- MIN_COHESION_SCORE = 20 (normalize 후검증)
+- MIN_ENTITY_WEIGHT_SUM = 0.6 (Stage 1 통과 기준)
+- STAGE2_DEFAULT_COHESION = 50 (Stage 2 승인 시 강제 부여)
+
+### 거절 규칙(시스템 프롬프트로 강제)
+
+- 카테고리 단어만으로는 절대 승인 금지: festival, synth, preview, release, new music, house, techno, club, lineup 등
+- 매체명/사이트명/시리즈명 묶음 금지
+- 연도 단독(2025, 2026 등) 묶음 금지
+- 인터뷰 형식 표현(catches up with, chats to, talks to 등) 묶음 금지
+- 연말 결산/차트/베스트 목록 묶음 금지
+- 모든 소스를 동등하게 취급
+
+### 응답 응답 시점에 반영되지 않는 사항
+
+- raw article의 사용 여부(is_used 같은 컬럼)는 없다. 같은 article이 여러 번 Stage 1 후보로 반복될 수 있다. 향후 `suggested_clusters.article_ids`에 이미 들어간 raw article을 제외하는 dedupe가 필요할 수 있다.
 
 ## 8. 기사 생성 정책
 
@@ -273,13 +328,22 @@ LLM 입력에 포함되는 정보:
 - Login, Search, Share, Previous article 등 원문 페이지 잡음이 남아 있으면 실패
 - 실패 시 한 번 재시도
 
-프롬프트 정책:
+프롬프트 정책 (`lib/prompts.ts` SYSTEM_PROMPT_A):
 
 - 한국어 기사 작성
 - 원문 그대로 복사 금지
 - `오늘`, `어제`, `최근`, `며칠 전` 같은 상대 날짜 표현 금지
 - 날짜가 필요하면 원문의 구체 날짜를 사용
 - 날짜가 불명확하면 날짜 언급 생략
+
+고유명사 표기 규칙(엄격 강화됨):
+
+- 기본 원칙: 영어 아티스트명/곡명/앨범명/EP명/레이블명/페스티벌명/클럽명/행사명은 영문 원문 그대로 표기.
+- 유일한 예외: 한국 일반 언론과 팬덤에서 이미 정착된 한국어 표기가 있는 경우에만 한국어 사용 가능. 예: Martin Garrix → 마틴 게릭스, Calvin Harris → 칼빈 해리스, David Guetta → 데이비드 게타, Skrillex → 스크릴렉스, deadmau5 → 데드마우스, Tomorrowland → 투모로우랜드, Ultra → 울트라, Coachella → 코첼라.
+- 절대 금지: 임의로 한글 발음을 만들어 붙이는 행위. Anyma→아니마, John Summit→존 서밋, Dom Dolla→돔 돌라, Anjunabeats→안준비츠, KSHMR→캐슈머, Fred again..→프레드 어게인 등 새 음역 금지.
+- 곡명/앨범명은 작은따옴표로 감싼 원문 그대로 표기. 예: 'Animals', 'A State of Trance 2026'.
+- 영문/한글 병기(예: "Martin Garrix(마틴 게릭스)") 금지. 둘 중 하나만 사용.
+- 애매하면 영문 사용 (안전판).
 
 ## 9. Cloudflare Pages 배포
 
@@ -311,16 +375,15 @@ Cloudflare에는 넣지 않아도 되는 것:
 
 ### 어드민 배포 관련 현재 판단
 
-정적 export 사이트에 `/admin`을 포함하면 middleware 인증이 적용되지 않는다. 그래서 아무나 `/admin` HTML을 볼 수 있다.
+정적 export 사이트에 `/admin`을 포함하면 proxy 인증이 적용되지 않는다. 그래서 아무나 `/admin` HTML을 볼 수 있다.
 
-가능한 선택지:
+현재 상태: `scripts/build-static.mjs`의 stash 목록에 `app/admin`이 포함돼 있어 배포본에는 `/admin`이 존재하지 않는다.
 
-- 안전 우선: 배포본에서 `/admin` 제외
+가능한 다른 선택지:
+
 - 배포본에 `/admin` UI를 포함하고 싶다면 Cloudflare Access로 `/admin*` 보호
 - 클라이언트 비밀번호 화면은 실수 방지용일 뿐 진짜 보안은 아님
 - 배포본에서 실제 어드민 기능까지 동작시키려면 SSG만으로는 부족하고, Cloudflare Functions/Workers 또는 별도 API 서버가 필요
-
-현재 권장: 공개 배포본에서는 `/admin` 제외, 실제 운영은 로컬 어드민에서 수행.
 
 ## 10. 환경 변수
 
@@ -332,6 +395,7 @@ Cloudflare에는 넣지 않아도 되는 것:
 - `ADMIN_PASSWORD`
 - `CLOUDFLARE_DEPLOY_HOOK_URL`
 - `CRON_SECRET` 선택
+- `SUGGEST_MODEL` 선택. suggest-clusters 전용 모델 오버라이드. 미설정 시 `qwen3:14b`
 
 ### Cloudflare Pages
 
@@ -383,11 +447,13 @@ Cloudflare에는 넣지 않아도 되는 것:
 
 ## 12. 알려진 이슈
 
-- Cloudflare 정적 export에서는 middleware/API가 실행되지 않는다.
-- 정적 배포에 `/admin`이 포함되면 인증 없이 HTML이 노출된다.
-- 현재 `middleware.ts`가 존재하지만 `scripts/build-static.mjs`의 stash 대상은 `proxy.ts`로 남아 있다. 정적 빌드 전에 `middleware.ts`도 제외 대상인지 확인해야 한다.
-- `npm run build:static`은 `--webpack`을 강제한다. Next 16.2 Turbopack은 `output:'export'`에서 `out/` 생성 문제가 있었다.
+- Cloudflare 정적 export에서는 proxy/API가 실행되지 않는다.
+- 정적 배포에 `/admin`이 포함되면 인증 없이 HTML이 노출된다 (현재 stash로 제외 중).
+- `npm run build:static`은 `--webpack`을 강제한다. Next 16.2 Turbopack은 `output:'export'`를 silently 무시해 `out/`이 생성되지 않는다.
+- `app/sitemap.ts`는 미존재 import(`@/utils/supabase/server`) 사용 중이라 타입체크가 깨진다. 작업 중인 파일.
 - `app/api/admin/login`의 rate limit은 in-memory라 dev 서버 재시작 시 초기화된다.
 - 일부 RSS 소스는 계속 실패할 수 있다. Beatportal/Resident Advisor는 수동 URL ingest가 더 현실적이다.
 - JS 렌더링 의존 사이트는 본문 추출 품질이 낮을 수 있다.
 - Ollama가 꺼져 있거나 `qwen3:14b` 모델이 없으면 기사 생성/토픽 제안이 실패한다.
+- 현재 `rss_sources` 행 수 = 42. 직전 16개 신규 소스 INSERT SQL 중 일부만 적용된 상태(이전 35 + 신규 7). 나머지 9개는 url unique 충돌이거나 SQL 실행이 부분 적용으로 끝난 것으로 추정. 다음에 한 번 더 적용해볼 여지 있음.
+- suggest-clusters에 raw article 중복 처리 방지 로직이 없다. 같은 article이 매번 후보로 다시 잡힐 수 있다.

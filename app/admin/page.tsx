@@ -817,15 +817,15 @@ function ArticlesReviewTab() {
                         >
                           검토
                         </Link>
+                        <button
+                          onClick={() => startEdit(article)}
+                          disabled={processing !== null || editingId !== null}
+                          className="px-3 py-2 border border-gray-300 text-gray-600 text-sm rounded font-semibold hover:bg-gray-50 disabled:opacity-50 whitespace-nowrap"
+                        >
+                          수정
+                        </button>
                         {subTab === 'draft' && (
                           <>
-                            <button
-                              onClick={() => startEdit(article)}
-                              disabled={processing !== null || editingId !== null}
-                              className="px-3 py-2 border border-gray-300 text-gray-600 text-sm rounded font-semibold hover:bg-gray-50 disabled:opacity-50 whitespace-nowrap"
-                            >
-                              수정
-                            </button>
                             <button
                               onClick={() => handlePublish(article)}
                               disabled={processing !== null || editingId !== null}

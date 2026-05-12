@@ -1,0 +1,124 @@
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { createClient } from '@supabase/supabase-js'
+
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'https://edmstarnews.com').replace(/\/$/, '')
+
+function loadEnvLocal() {
+  let text = ''
+  try {
+    text = readFileSync('.env.local', 'utf8')
+  } catch {
+    return
+  }
+
+  for (const line of text.split(/\r?\n/)) {
+    const trimmed = line.trim()
+    if (!trimmed || trimmed.startsWith('#') || !trimmed.includes('=')) continue
+    const index = trimmed.indexOf('=')
+    const key = trimmed.slice(0, index).trim()
+    const value = trimmed.slice(index + 1).trim().replace(/^["']|["']$/g, '')
+    if (key && process.env[key] === undefined) {
+      process.env[key] = value
+    }
+  }
+}
+
+function escapeXml(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;')
+}
+
+function formatDate(value) {
+  if (!value) return new Date().toISOString()
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString()
+}
+
+function articlePath(article) {
+  return `/articles/${article.slug || article.id}/`
+}
+
+loadEnvLocal()
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are required')
+}
+
+const supabase = createClient(supabaseUrl, supabaseAnonKey)
+
+const { data: articles, error } = await supabase
+  .from('articles')
+  .select('id, slug, title, published_at, updated_at, created_at')
+  .eq('published', true)
+  .order('published_at', { ascending: false })
+  .limit(5000)
+
+if (error) {
+  throw new Error(`Failed to load articles for sitemap: ${error.message}`)
+}
+
+mkdirSync('public', { recursive: true })
+
+const urls = [
+  {
+    loc: `${SITE_URL}/`,
+    lastmod: new Date().toISOString(),
+    changefreq: 'hourly',
+    priority: '1.0',
+  },
+  ...(articles ?? []).map((article) => ({
+    loc: `${SITE_URL}${articlePath(article)}`,
+    lastmod: formatDate(article.updated_at || article.published_at || article.created_at),
+    changefreq: 'daily',
+    priority: '0.8',
+  })),
+]
+
+const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urls.map((url) => `  <url>
+    <loc>${escapeXml(url.loc)}</loc>
+    <lastmod>${escapeXml(url.lastmod)}</lastmod>
+    <changefreq>${url.changefreq}</changefreq>
+    <priority>${url.priority}</priority>
+  </url>`).join('\n')}
+</urlset>
+`
+
+const robots = `User-agent: *
+Allow: /
+
+Sitemap: ${SITE_URL}/sitemap.xml
+`
+
+const llms = `# EDM Star News
+
+> Korean-language EDM and electronic music news site. Articles are generated from curated English-language source articles, then reviewed before publication.
+
+Base URL: ${SITE_URL}
+Sitemap: ${SITE_URL}/sitemap.xml
+
+## Public Content
+
+- Home: ${SITE_URL}/
+- Articles: ${SITE_URL}/articles/
+
+## Notes for AI Crawlers
+
+- Crawl public article pages only.
+- Do not use or infer access to local admin/API routes.
+- Published article pages are static Cloudflare Pages output.
+`
+
+writeFileSync('public/sitemap.xml', sitemap)
+writeFileSync('public/robots.txt', robots)
+writeFileSync('public/llms.txt', llms)
+
+console.log(`Generated sitemap.xml, robots.txt, llms.txt for ${(articles ?? []).length} published articles`)

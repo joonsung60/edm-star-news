@@ -3,23 +3,23 @@ import { supabase } from '@/lib/supabase'
 
 type ArticleListItem = {
   id: string
+  slug: string | null
   title: string
   content: string
   published_at: string | null
   cluster_id: string | null
   imageUrl: string | null
-  // TODO(supabase-planned-migrations.sql §4): articles.category/genre 컬럼 추가 후 select에 포함
   category?: string | null
   genre?: string | null
 }
 
 type ArticleRow = {
   id: string
+  slug: string | null
   title: string
   content: string
   published_at: string | null
   cluster_id: string | null
-  // 동일 TODO: 컬럼 추가 후 select에 추가하고 아래 매핑에서 전달
   category?: string | null
   genre?: string | null
 }
@@ -35,11 +35,9 @@ type RawArticleImageRow = {
 }
 
 async function loadArticles(): Promise<{ articles: ArticleListItem[]; error: string | null }> {
-  // TODO(supabase-planned-migrations.sql §4): articles 테이블에 category, genre 컬럼 추가 후
-  // select에 ', category, genre'를 덧붙이고, 아래 매핑에서 r.category, r.genre를 그대로 전달할 것.
   const { data, error } = await supabase
     .from('articles')
-    .select('id, title, content, published_at, cluster_id')
+    .select('id, slug, title, content, published_at, cluster_id, category, genre')
     .eq('published', true)
     .order('published_at', { ascending: false })
     .limit(20)
@@ -88,11 +86,14 @@ async function loadArticles(): Promise<{ articles: ArticleListItem[]; error: str
 
   const articles: ArticleListItem[] = rows.map((r) => ({
     id: r.id,
+    slug: r.slug,
     title: r.title,
     content: r.content,
     published_at: r.published_at,
     cluster_id: r.cluster_id,
     imageUrl: r.cluster_id ? imageByCluster.get(r.cluster_id) ?? null : null,
+    category: r.category,
+    genre: r.genre,
   }))
 
   return { articles, error: null }
@@ -124,7 +125,7 @@ export default async function Home() {
             {articles.map((article) => (
               <li key={article.id}>
                 <Link
-                  href={`/articles/${article.id}`}
+                  href={`/articles/${article.slug ?? article.id}`}
                   className="flex gap-4 py-5 border-b border-zinc-200 group"
                 >
                   <div className="w-40 h-28 sm:w-48 sm:h-32 flex-shrink-0 overflow-hidden rounded bg-zinc-100">
@@ -172,7 +173,7 @@ export default async function Home() {
               {popular.map((article, idx) => (
                 <li key={article.id}>
                   <Link
-                    href={`/articles/${article.id}`}
+                    href={`/articles/${article.slug ?? article.id}`}
                     className="flex gap-3 group"
                   >
                     <span className="text-xl font-bold text-zinc-300 w-6 flex-shrink-0 leading-tight">

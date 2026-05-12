@@ -22,9 +22,10 @@ const NAV_ITEMS = [
   { label: "홈", href: "/" },
   { label: "페스티벌", href: "#" },
   { label: "아티스트", href: "#" },
-  { label: "신보", href: "#" },
+  { label: "릴리즈", href: "#" },
+  { label: "뉴스", href: "#" },
+  { label: "인터뷰", href: "#" },
   { label: "장르별 ▾", href: "#" },
-  { label: "국가별 ▾", href: "#" },
 ];
 
 const showAdminLink = process.env.BUILD_STATIC !== "1";

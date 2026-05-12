@@ -41,22 +41,30 @@ export async function PATCH(
     return NextResponse.json({ error: '기사를 찾을 수 없습니다.' }, { status: 404 })
   }
 
-  if (existing.published) {
-    return NextResponse.json(
-      { error: '게시된 기사는 이 화면에서 수정할 수 없습니다.' },
-      { status: 400 }
-    )
-  }
-
   const { data, error } = await supabase
     .from('articles')
-    .update({ title, content })
+    .update({ title, content, updated_at: new Date().toISOString() })
     .eq('id', id)
-    .select('id, title, content, published, published_at, created_at, cluster_id')
+    .select('id, title, content, published, published_at, created_at, updated_at, cluster_id')
     .maybeSingle()
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  if (existing.published) {
+    const deployHookUrl = process.env.CLOUDFLARE_DEPLOY_HOOK_URL
+    if (deployHookUrl) {
+      fetch(deployHookUrl, { method: 'POST' })
+        .then((res) => {
+          if (!res.ok) {
+            console.error('[edit] deploy hook returned', res.status, res.statusText)
+          }
+        })
+        .catch((err) => {
+          console.error('[edit] deploy hook failed:', err)
+        })
+    }
   }
 
   return NextResponse.json({ article: data })

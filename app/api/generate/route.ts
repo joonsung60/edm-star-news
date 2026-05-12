@@ -14,7 +14,15 @@ type SourceArticle = {
 type GeneratedArticle = {
   title: string
   content: string
+  slug: string
+  category: string
+  genre: string
 }
+
+const ALLOWED_CATEGORIES = ['페스티벌', '아티스트', '릴리즈', '뉴스', '인터뷰']
+const SLUG_MAX_LENGTH = 30
+const DEFAULT_CATEGORY = '뉴스'
+const DEFAULT_GENRE = 'edm'
 
 type ClusterArticleRow = {
   raw_article_id: string
@@ -103,6 +111,9 @@ function parseGeneratedArticle(response: string): GeneratedArticle | null {
         return {
           title: parsed.title.trim(),
           content: parsed.content.trim(),
+          slug: typeof parsed.slug === 'string' ? parsed.slug.trim() : '',
+          category: typeof parsed.category === 'string' ? parsed.category.trim() : '',
+          genre: typeof parsed.genre === 'string' ? parsed.genre.trim() : '',
         }
       }
     } catch {
@@ -111,15 +122,56 @@ function parseGeneratedArticle(response: string): GeneratedArticle | null {
   }
 
   const titleMatch = response.match(/^제목:\s*(.+)$/m)
-  const contentMatch = response.match(/^내용:\s*([\s\S]+)$/m)
+  const contentMatch = response.match(/^내용:\s*([\s\S]+?)(?=\n(?:슬러그|카테고리|장르):|$)/m)
   if (!titleMatch || !contentMatch) {
     return null
   }
+  const slugMatch = response.match(/^슬러그:\s*(.+)$/m)
+  const categoryMatch = response.match(/^카테고리:\s*(.+)$/m)
+  const genreMatch = response.match(/^장르:\s*(.+)$/m)
 
   return {
     title: titleMatch[1].trim(),
     content: contentMatch[1].trim(),
+    slug: slugMatch?.[1].trim() ?? '',
+    category: categoryMatch?.[1].trim() ?? '',
+    genre: genreMatch?.[1].trim() ?? '',
   }
+}
+
+function normalizeSlug(raw: string): string {
+  return raw
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, SLUG_MAX_LENGTH)
+    .replace(/-+$/, '')
+}
+
+function normalizeCategory(raw: string): string {
+  const trimmed = raw.trim()
+  return ALLOWED_CATEGORIES.includes(trimmed) ? trimmed : DEFAULT_CATEGORY
+}
+
+function normalizeGenre(raw: string): string | null {
+  const trimmed = raw.trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
+  return trimmed.length > 0 ? trimmed : null
+}
+
+async function ensureUniqueSlug(base: string): Promise<string> {
+  const safeBase = base || `article-${Date.now().toString(36)}`
+  let candidate = safeBase
+  for (let suffix = 2; suffix < 100; suffix++) {
+    const { data } = await supabase
+      .from('articles')
+      .select('id')
+      .eq('slug', candidate)
+      .maybeSingle()
+    if (!data) return candidate
+    candidate = `${safeBase}-${suffix}`
+  }
+  return `${safeBase}-${Date.now().toString(36)}`
 }
 
 function validateKoreanArticle(article: GeneratedArticle): string | null {
@@ -180,19 +232,21 @@ async function generateKoreanArticle(articles: SourceArticle[]): Promise<Generat
 - 소스 내용을 그대로 복사하지 마세요.
 - 영어 원문 문장, 사이트 메뉴, 태그, 공유 버튼, 관련 기사 목록은 출력하지 마세요.
 - 모든 소스를 동등하게 참고하되, 어느 한 소스의 표현이나 판단을 검증 없이 확대하지 마세요.
-- 영어 곡명, 아티스트명, 앨범명, 레이블명은 영어 원문 그대로 표기하고 한글 발음 표기를 붙이지 마세요.
-- 단, 한국어명이 실제 한국에서 널리 쓰이는 아티스트나 행사명은 자연스럽게 한국어명을 병기할 수 있습니다. 임의로 한국어명을 만들어 붙이지 마세요.
+- 고유명사 표기는 시스템 메시지 [고유명사 표기] 섹션을 그대로 따르세요. 아티스트/곡/앨범/레이블/페스티벌/클럽/믹스명은 영문 원문이 기본이고, 한국 정착 표기(마틴 게릭스, 칼빈 해리스, 투모로우랜드 등)와 본문에서 단독으로 지칭하는 도시·국가명(더블린, 암스테르담, 베를린 등)만 한국어로 씁니다. 도시명이 'GU49: Dublin', 'Boiler Room Berlin' 같은 고유명사의 일부일 때는 영문 그대로 유지하세요. Anyma·John Summit·Dom Dolla·Deep Dish·Moderat 같은 한국어 정착 표기가 없는 이름은 어떤 경우에도 임의로 한글 음역하지 마세요. 영문/한국어 병기("Martin Garrix(마틴 게릭스)" 등)도 금지입니다.
 - '오늘', '어제', '최근', '며칠 전' 같은 상대적 날짜 표현을 쓰지 마세요.
 - 날짜가 필요하면 소스의 발행일처럼 구체적인 년/월/일만 쓰고, 날짜가 불명확하면 생략하세요.
 - 출력은 반드시 JSON 객체 하나만 허용됩니다.
-- JSON 키는 "title", "content" 두 개만 사용하세요.
-- title과 content 값은 한국어 기사체로 작성하세요.
+- JSON 키는 "title", "content", "slug", "category", "genre" 다섯 개입니다.
+- title과 content는 한국어 기사체로 작성하세요.
+- slug: 영문 소문자와 하이픈만 사용하고 30자 이내. 기사 핵심 키워드 기반. 예: "martin-garrix-new-album-2026"
+- category: "페스티벌", "아티스트", "릴리즈", "뉴스", "인터뷰" 다섯 개 중에서 가장 적합한 하나를 정확히 그 한국어 문자열 그대로 사용하세요.
+- genre: house, techno, trance, drum-and-bass, dubstep, ambient, experimental, hardstyle, future-bass, big-room 등 EDM 장르 중 가장 적합한 하나를 영문 소문자로 작성하세요. 장르를 특정하기 어렵다면 "edm"으로 두세요.
 ${retryGuidance}
 
 ${articlesText}
 
 응답 예:
-{"title":"한국어 기사 제목","content":"한국어 기사 본문"}`,
+{"title":"한국어 기사 제목","content":"한국어 기사 본문","slug":"english-keyword-slug-2026","category":"릴리즈","genre":"house"}`,
         stream: false,
         think: false,
       }),
@@ -284,16 +338,22 @@ export async function POST(req: NextRequest) {
       }
 
       // 한국어 종합 기사 생성
-      const { title, content } = await generateKoreanArticle(usableArticles)
+      const generated = await generateKoreanArticle(usableArticles)
+      const slug = await ensureUniqueSlug(normalizeSlug(generated.slug))
+      const category = normalizeCategory(generated.category)
+      const genre = normalizeGenre(generated.genre) ?? DEFAULT_GENRE
 
       // articles 테이블에 저장
       const { data, error } = await supabase
         .from('articles')
         .insert({
-          title,
-          content,
+          title: generated.title,
+          content: generated.content,
           cluster_id: clusterId,
           published: false,
+          slug,
+          category,
+          genre,
         })
         .select()
         .single()

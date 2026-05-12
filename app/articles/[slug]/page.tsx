@@ -2,12 +2,18 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const ARTICLE_SELECT =
+  'id, title, content, published, published_at, created_at, updated_at, cluster_id, slug, category, genre'
+
 export async function generateStaticParams() {
   const { data } = await supabase
     .from('articles')
-    .select('id')
+    .select('id, slug')
     .eq('published', true)
-  return (data ?? []).map((row: { id: string }) => ({ id: row.id }))
+  return (data ?? []).map((row: { id: string; slug: string | null }) => ({
+    slug: row.slug ?? row.id,
+  }))
 }
 
 type ArticleDetail = {
@@ -17,34 +23,53 @@ type ArticleDetail = {
   published: boolean
   published_at: string | null
   created_at: string
+  updated_at: string | null
   cluster_id: string | null
-  // TODO(supabase-planned-migrations.sql §4): articles.category/genre 컬럼 추가 후 select에 포함
-  category?: string | null
-  genre?: string | null
+  slug: string | null
+  category: string | null
+  genre: string | null
+}
+
+async function loadArticle(key: string): Promise<{
+  data: ArticleDetail | null
+  errorMessage: string | null
+}> {
+  const bySlug = await supabase
+    .from('articles')
+    .select(ARTICLE_SELECT)
+    .eq('slug', key)
+    .maybeSingle()
+  if (bySlug.error) return { data: null, errorMessage: bySlug.error.message }
+  if (bySlug.data) return { data: bySlug.data as ArticleDetail, errorMessage: null }
+
+  if (UUID_PATTERN.test(key)) {
+    const byId = await supabase
+      .from('articles')
+      .select(ARTICLE_SELECT)
+      .eq('id', key)
+      .maybeSingle()
+    if (byId.error) return { data: null, errorMessage: byId.error.message }
+    return { data: (byId.data as ArticleDetail | null) ?? null, errorMessage: null }
+  }
+
+  return { data: null, errorMessage: null }
 }
 
 export default async function ArticlePage({
   params,
 }: {
-  params: Promise<{ id: string }>
+  params: Promise<{ slug: string }>
 }) {
-  const { id } = await params
+  const { slug } = await params
+  const { data, errorMessage } = await loadArticle(slug)
 
-  // TODO(supabase-planned-migrations.sql §4): articles 테이블에 category, genre 컬럼 추가 후
-  // select에 ', category, genre'를 덧붙이고, 아래 캐스팅에서도 그대로 전달될 것.
-  const { data, error } = await supabase
-    .from('articles')
-    .select('id, title, content, published, published_at, created_at, cluster_id')
-    .eq('id', id)
-    .maybeSingle()
-
-  if (error) {
+  if (errorMessage) {
     return (
       <div className="min-h-full bg-zinc-50 text-zinc-900">
         <main className="max-w-3xl mx-auto px-6 py-12">
           <BackLink />
           <div className="mt-6 p-4 border border-red-300 bg-red-50 rounded text-red-700 text-sm">
-            기사를 불러오지 못했습니다: {error.message}
+            기사를 불러오지 못했습니다: {errorMessage}
           </div>
         </main>
       </div>
@@ -53,7 +78,11 @@ export default async function ArticlePage({
 
   if (!data) notFound()
 
-  const article = data as ArticleDetail
+  const article = data
+  const showUpdated =
+    article.published_at &&
+    article.updated_at &&
+    article.updated_at !== article.published_at
 
   return (
     <div className="min-h-full bg-zinc-50 text-zinc-900">
@@ -61,11 +90,16 @@ export default async function ArticlePage({
         <BackLink />
 
         <article className="mt-6">
-          <div className="flex items-center gap-2 mb-3 text-xs text-zinc-500">
+          <div className="flex flex-wrap items-center gap-2 mb-3 text-xs text-zinc-500">
             {article.published_at ? (
               <time>발행 {formatDate(article.published_at)}</time>
             ) : (
               <time>생성 {formatDate(article.created_at)}</time>
+            )}
+            {showUpdated && article.updated_at && (
+              <span className="text-zinc-400">
+                · 수정됨 {formatDate(article.updated_at)}
+              </span>
             )}
             {!article.published && (
               <span className="px-1.5 py-0.5 rounded bg-zinc-200 text-zinc-600">

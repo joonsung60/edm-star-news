@@ -47,6 +47,14 @@ process.on('SIGTERM', () => { cleanup(); process.exit(143) })
 
 let status = 0
 try {
+  const generateStaticFiles = spawnSync(process.execPath, ['scripts/generate-static-files.mjs'], {
+    stdio: 'inherit',
+    env: process.env,
+  })
+  if ((generateStaticFiles.status ?? 1) !== 0) {
+    process.exit(generateStaticFiles.status ?? 1)
+  }
+
   stash()
   // Use webpack: Turbopack in Next.js 16.2 silently no-ops `output: 'export'`
   // (build completes but no `out/` directory is produced).

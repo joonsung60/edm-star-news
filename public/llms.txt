@@ -1,0 +1,17 @@
+# EDM Star News
+
+> Korean-language EDM and electronic music news site. Articles are generated from curated English-language source articles, then reviewed before publication.
+
+Base URL: https://edmstarnews.com
+Sitemap: https://edmstarnews.com/sitemap.xml
+
+## Public Content
+
+- Home: https://edmstarnews.com/
+- Articles: https://edmstarnews.com/articles/
+
+## Notes for AI Crawlers
+
+- Crawl public article pages only.
+- Do not use or infer access to local admin/API routes.
+- Published article pages are static Cloudflare Pages output.

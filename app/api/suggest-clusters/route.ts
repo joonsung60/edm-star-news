@@ -461,6 +461,82 @@ async function hydrateSuggestions(rows: DbSuggestedCluster[]): Promise<Persisted
   })
 }
 
+function normalizeTopicKey(topic: string): string {
+  return topic.trim().toLowerCase()
+}
+
+async function loadExistingTopicKeys(): Promise<Set<string>> {
+  const existingTopicKeys = new Set<string>()
+
+  const { data: pendingRows, error: pendingError } = await supabase
+    .from('suggested_clusters')
+    .select('topic')
+    .eq('status', 'pending')
+
+  if (pendingError) {
+    throw new Error(`기존 pending 토픽 조회 실패: ${pendingError.message}`)
+  }
+
+  for (const row of (pendingRows ?? []) as { topic: string | null }[]) {
+    if (row.topic) existingTopicKeys.add(normalizeTopicKey(row.topic))
+  }
+
+  const { data: publishedRows, error: publishedError } = await supabase
+    .from('articles')
+    .select('cluster_id')
+    .eq('published', true)
+    .not('cluster_id', 'is', null)
+
+  if (publishedError) {
+    throw new Error(`게시 완료 기사 조회 실패: ${publishedError.message}`)
+  }
+
+  const publishedClusterIds = Array.from(new Set(
+    ((publishedRows ?? []) as { cluster_id: string | null }[])
+      .map((row) => row.cluster_id)
+      .filter((id): id is string => Boolean(id))
+  ))
+
+  if (publishedClusterIds.length > 0) {
+    const { data: clusterRows, error: clusterError } = await supabase
+      .from('article_clusters')
+      .select('id, topic')
+      .in('id', publishedClusterIds)
+
+    if (clusterError) {
+      throw new Error(`게시 완료 토픽 조회 실패: ${clusterError.message}`)
+    }
+
+    for (const row of (clusterRows ?? []) as { topic: string | null }[]) {
+      if (row.topic) existingTopicKeys.add(normalizeTopicKey(row.topic))
+    }
+  }
+
+  return existingTopicKeys
+}
+
+async function filterDuplicateSuggestions(
+  suggestions: SuggestionWithArticles[]
+): Promise<{ suggestions: SuggestionWithArticles[]; duplicateSkipCount: number }> {
+  const existingTopicKeys = await loadExistingTopicKeys()
+  const filtered: SuggestionWithArticles[] = []
+  let duplicateSkipCount = 0
+
+  for (const suggestion of suggestions) {
+    const topicKey = normalizeTopicKey(suggestion.topic)
+    if (existingTopicKeys.has(topicKey)) {
+      console.log(`skipped (duplicate): ${suggestion.topic}`)
+      duplicateSkipCount++
+      continue
+    }
+
+    existingTopicKeys.add(topicKey)
+    filtered.push(suggestion)
+  }
+
+  return { suggestions: filtered, duplicateSkipCount }
+}
+
 // ============ Entity dictionary (2-stage 후보 생성용) ============
 
 type EntityEntry = {
@@ -754,7 +830,24 @@ async function runLlmOnlyPath(
     })
   }
 
-  const insertPayload = llmSuggestions.map((s) => ({
+  const { suggestions: saveableSuggestions, duplicateSkipCount } =
+    await filterDuplicateSuggestions(llmSuggestions)
+
+  if (saveableSuggestions.length === 0) {
+    return NextResponse.json({
+      suggestions: [],
+      saved: 0,
+      total: totalCount,
+      source: 'llm',
+      model: suggestModel,
+      llmSuggestionCount: parsed.suggestions?.length ?? 0,
+      normalizedSuggestionCount: llmSuggestions.length,
+      duplicateSkipCount,
+      rawResponsePreview: responseText.slice(0, 500),
+    })
+  }
+
+  const insertPayload = saveableSuggestions.map((s) => ({
     topic: s.topic,
     keywords: s.keywords,
     article_ids: s.articleIds,
@@ -779,6 +872,7 @@ async function runLlmOnlyPath(
     model: suggestModel,
     llmSuggestionCount: parsed.suggestions?.length ?? 0,
     normalizedSuggestionCount: llmSuggestions.length,
+    duplicateSkipCount,
   })
 }
 
@@ -894,7 +988,26 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    const insertPayload = normalized.map((s) => ({
+    const { suggestions: saveableSuggestions, duplicateSkipCount } =
+      await filterDuplicateSuggestions(normalized)
+
+    if (saveableSuggestions.length === 0) {
+      console.log('[suggest-clusters] 저장 0건')
+      return NextResponse.json({
+        suggestions: [],
+        saved: 0,
+        total: articles.length,
+        source: 'entity+llm',
+        model: suggestModel,
+        candidateCount: candidates.length,
+        candidateReviewCount: candidatesForLlm.length,
+        approvedCount,
+        normalizedSuggestionCount: normalized.length,
+        duplicateSkipCount,
+      })
+    }
+
+    const insertPayload = saveableSuggestions.map((s) => ({
       topic: s.topic,
       keywords: s.keywords,
       article_ids: s.articleIds,
@@ -923,6 +1036,7 @@ export async function POST(req: NextRequest) {
       candidateReviewCount: candidatesForLlm.length,
       approvedCount,
       normalizedSuggestionCount: normalized.length,
+      duplicateSkipCount,
     })
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 })
