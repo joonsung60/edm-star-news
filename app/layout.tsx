@@ -27,6 +27,8 @@ const NAV_ITEMS = [
   { label: "국가별 ▾", href: "#" },
 ];
 
+const showAdminLink = process.env.BUILD_STATIC !== "1";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -47,12 +49,14 @@ export default function RootLayout({
               >
                 EDM Star News
               </Link>
-              <Link
-                href="/admin"
-                className="text-xs text-zinc-500 hover:text-zinc-900 transition-colors"
-              >
-                어드민
-              </Link>
+              {showAdminLink && (
+                <Link
+                  href="/admin"
+                  className="text-xs text-zinc-500 hover:text-zinc-900 transition-colors"
+                >
+                  어드민
+                </Link>
+              )}
             </div>
             <nav className="flex gap-1 sm:gap-3 text-sm font-medium overflow-x-auto">
               {NAV_ITEMS.map((item) => (

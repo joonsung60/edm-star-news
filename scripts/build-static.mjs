@@ -8,6 +8,7 @@ import { spawnSync } from 'node:child_process'
 
 const STASH = '.cf-build-stash'
 const PATHS = [
+  ['app/admin', `${STASH}/app/admin`],
   ['app/api', `${STASH}/app/api`],
   ['proxy.ts', `${STASH}/proxy.ts`],
 ]
