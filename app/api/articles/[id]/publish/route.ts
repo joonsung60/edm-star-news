@@ -30,5 +30,18 @@ export async function PATCH(
     return NextResponse.json({ error: '기사를 찾을 수 없습니다.' }, { status: 404 })
   }
 
+  const deployHookUrl = process.env.CLOUDFLARE_DEPLOY_HOOK_URL
+  if (deployHookUrl) {
+    fetch(deployHookUrl, { method: 'POST' })
+      .then((res) => {
+        if (!res.ok) {
+          console.error('[publish] deploy hook returned', res.status, res.statusText)
+        }
+      })
+      .catch((err) => {
+        console.error('[publish] deploy hook failed:', err)
+      })
+  }
+
   return NextResponse.json({ article: data })
 }

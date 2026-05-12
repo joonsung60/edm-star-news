@@ -2,7 +2,13 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
-export const dynamic = 'force-dynamic'
+export async function generateStaticParams() {
+  const { data } = await supabase
+    .from('articles')
+    .select('id')
+    .eq('published', true)
+  return (data ?? []).map((row: { id: string }) => ({ id: row.id }))
+}
 
 type ArticleDetail = {
   id: string

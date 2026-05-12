@@ -1,0 +1,62 @@
+// Static build for Cloudflare Pages.
+// Temporarily moves admin/api/proxy out of the tree so `output: 'export'`
+// can succeed (route handlers and proxy are unsupported by static export),
+// runs `next build` with BUILD_STATIC=1, and restores the files on exit.
+import { existsSync, mkdirSync, renameSync, rmSync } from 'node:fs'
+import { dirname } from 'node:path'
+import { spawnSync } from 'node:child_process'
+
+const STASH = '.cf-build-stash'
+const PATHS = [
+  ['app/admin', `${STASH}/app/admin`],
+  ['app/api', `${STASH}/app/api`],
+  ['proxy.ts', `${STASH}/proxy.ts`],
+]
+
+function stash() {
+  for (const [src, dst] of PATHS) {
+    if (existsSync(src)) {
+      mkdirSync(dirname(dst), { recursive: true })
+      renameSync(src, dst)
+    }
+  }
+}
+
+function restore() {
+  for (const [src, dst] of PATHS) {
+    if (existsSync(dst)) {
+      const parent = dirname(src)
+      if (parent && parent !== '.') mkdirSync(parent, { recursive: true })
+      renameSync(dst, src)
+    }
+  }
+  try {
+    rmSync(STASH, { recursive: true, force: true })
+  } catch {}
+}
+
+let cleanedUp = false
+function cleanup() {
+  if (cleanedUp) return
+  cleanedUp = true
+  restore()
+}
+
+process.on('SIGINT', () => { cleanup(); process.exit(130) })
+process.on('SIGTERM', () => { cleanup(); process.exit(143) })
+
+let status = 0
+try {
+  stash()
+  // Use webpack: Turbopack in Next.js 16.2 silently no-ops `output: 'export'`
+  // (build completes but no `out/` directory is produced).
+  const result = spawnSync('npx', ['next', 'build', '--webpack'], {
+    stdio: 'inherit',
+    env: { ...process.env, BUILD_STATIC: '1' },
+  })
+  status = result.status ?? 1
+} finally {
+  cleanup()
+}
+
+process.exit(status)

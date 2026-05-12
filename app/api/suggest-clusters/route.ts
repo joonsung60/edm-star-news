@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { cleanArticleText } from '@/lib/article-extraction'
+import { getSourceTier, isAllTierC } from '@/lib/source-tiers'
 
 const SUGGEST_SYSTEM = `당신은 EDM 뉴스 에디터입니다. 최근 영문 EDM 뉴스 기사 목록을 받아 한국어 기사 1개로 재구성할 수 있는 후보만 제안하세요.
 
@@ -9,8 +10,9 @@ const SUGGEST_SYSTEM = `당신은 EDM 뉴스 에디터입니다. 최근 영문 E
 	- 반드시 같은 사건, 같은 릴리즈, 같은 행사, 같은 인물, 같은 제품 단위로만 묶으세요.
 	- Tier C 소스만으로 구성된 그룹은 제안하지 마세요. Tier C는 보조 신호로만 사용하세요.
 	- Tier A 소스가 포함된 구체적 사건/릴리즈/행사를 우선 제안하세요.
+	- 연도 단독(2025, 2026 등), 매체명, 사이트명, 시리즈명, 인터뷰 형식 표현(catches up with, chats to, talks to 등), 연말 결산/차트/베스트 목록 문구는 절대 클러스터 기준으로 사용하지 마세요.
 	- 좋은 예: "Music On Festival 취소 사태", "EDC Las Vegas 2026 관련 소식", "Armin van Buuren 'A State of Trance 2026' 발매"
-- 나쁜 예: "주요 페스티벌 소식", "신시사이저 뉴스", "preview 관련 EDM 뉴스"
+- 나쁜 예: "주요 페스티벌 소식", "신시사이저 뉴스", "preview 관련 EDM 뉴스", "2025 관련 소식", "catches up with 관련 소식", "Best Electronic Music 관련 소식"
 
 반드시 아래 JSON 형식으로만 응답하세요. 그 외의 설명이나 마크다운 금지.
 
@@ -27,7 +29,8 @@ const SUGGEST_SYSTEM = `당신은 EDM 뉴스 에디터입니다. 최근 영문 E
 }
 
 규칙:
-- 3~5개의 그룹을 제안하되, 각 그룹은 최소 2개의 기사를 포함
+- 0~5개의 그룹을 제안하되, 각 그룹은 최소 2개의 기사를 포함
+- 같은 사건/릴리즈/행사/인물/제품이라는 근거가 부족하면 억지로 묶지 말고 빈 배열을 반환하세요.
 - topic: 한국어, 구체적이고 명확하게 (예: "Music On Festival 취소 사태")
 - keywords: 3~6개의 영문 키워드. 카테고리 단어 단독 금지
 - articleIds: 반드시 제공된 목록의 UUID만 사용
@@ -63,6 +66,9 @@ type SourceTier = 'A' | 'B' | 'C' | 'manual' | 'unknown'
 type SuggestionStatus = 'pending' | 'approved' | 'rejected' | 'published'
 
 const ALLOWED_STATUSES: SuggestionStatus[] = ['pending', 'approved', 'rejected', 'published']
+const MIN_COHESION_SCORE = 40
+const DEFAULT_ANALYSIS_LIMIT = 100
+const MAX_ANALYSIS_LIMIT = 150
 
 type DbSuggestedCluster = {
   id: string
@@ -180,14 +186,22 @@ const STOPWORDS = new Set([
 	  'org',
 	])
 
-function normalizeTier(value: unknown): SourceTier {
-  const normalized = typeof value === 'string' ? value.trim().toLowerCase() : ''
-  if (normalized === 'a') return 'A'
-  if (normalized === 'b') return 'B'
-  if (normalized === 'c') return 'C'
-  if (normalized === 'manual') return 'manual'
-  return 'unknown'
-}
+const SOURCE_OR_SERIES_PATTERNS = [
+  /\b909originals\b/i,
+  /^ia mix(?:\s+\d+)?$/i,
+  /^myrecordbag$/i,
+  /\b(bandcamp daily|beatportal|attack magazine|inverted audio)\b/i,
+  /\b(mixmag|dj mag|the quietus|crack magazine|ransom note|5 magazine)\b/i,
+  /\b(create digital music|cdm|groove magazine|fazemag|tsugi)\b/i,
+]
+
+const LOW_SIGNAL_CLUSTER_PATTERNS = [
+  /^(?:19|20)\d{2}$/i,
+  /^(?:19|20)\d{2}\s+(?:related|news|review|in review)$/i,
+  /\b(?:catches up with|chats to|talks to|interview with|in conversation with)\b/i,
+  /\b(?:best electronic music|best albums|best tracks|top-selling tracks|top selling tracks|chart toppers)\b/i,
+  /\bfestival line-ups you might\b/i,
+]
 
 async function attachSourceMeta(articles: RawArticle[]): Promise<RawArticle[]> {
   const sourceIds = Array.from(new Set(
@@ -201,30 +215,17 @@ async function attachSourceMeta(articles: RawArticle[]): Promise<RawArticle[]> {
   }
 
   const sourceMeta = new Map<string, { name: string; tier: SourceTier }>()
-  const withTier = await supabase
+  const { data } = await supabase
     .from('rss_sources')
-    .select('id, name, tier')
+    .select('id, name')
     .in('id', sourceIds)
 
-  if (!withTier.error) {
-    for (const source of (withTier.data ?? []) as { id: string | number; name: string | null; tier: string | null }[]) {
-      sourceMeta.set(String(source.id), {
-        name: source.name ?? '알 수 없는 소스',
-        tier: normalizeTier(source.tier),
-      })
-    }
-  } else {
-    const withoutTier = await supabase
-      .from('rss_sources')
-      .select('id, name')
-      .in('id', sourceIds)
-
-    for (const source of (withoutTier.data ?? []) as { id: string | number; name: string | null }[]) {
-      sourceMeta.set(String(source.id), {
-        name: source.name ?? '알 수 없는 소스',
-        tier: 'unknown',
-      })
-    }
+  for (const source of (data ?? []) as { id: string | number; name: string | null }[]) {
+    const name = source.name ?? '알 수 없는 소스'
+    sourceMeta.set(String(source.id), {
+      name,
+      tier: getSourceTier(name),
+    })
   }
 
   return articles.map((article) => {
@@ -238,7 +239,7 @@ async function attachSourceMeta(articles: RawArticle[]): Promise<RawArticle[]> {
 }
 
 function articleSnippet(article: RawArticle): string {
-  return cleanArticleText(article.content ?? '', 600)
+  return cleanArticleText(article.content ?? '', 450)
     .replace(/\s+/g, ' ')
     .trim()
 }
@@ -261,7 +262,9 @@ function normalizeText(text: string): string {
 
 function normalizeEntity(entity: string): string {
   return entity
+    .replace(/^[-–—:|]\s*/i, '')
     .replace(/^(at|for|of|the|with)\s+/i, '')
+    .replace(/\s+[-–—|]\s*(909originals|bandcamp daily|beatportal|attack magazine|inverted audio|mixmag|dj mag|cdm|create digital music)$/i, '')
     .replace(/\s+/g, ' ')
     .trim()
 }
@@ -280,9 +283,25 @@ function isUrlOrDomainText(text: string): boolean {
     || /\b(com|net|org|co|uk|de|fr|io|fm)\b/.test(normalized)
 }
 
+function isSourceOrSeriesEntity(text: string): boolean {
+  const normalized = normalizeEntity(text)
+  return SOURCE_OR_SERIES_PATTERNS.some((pattern) => pattern.test(normalized))
+}
+
+function isLowSignalClusterText(text: string): boolean {
+  const normalized = normalizeText(text)
+  return LOW_SIGNAL_CLUSTER_PATTERNS.some((pattern) => pattern.test(normalized))
+}
+
 function isSpecificEntity(entity: string): boolean {
   const normalized = normalizeText(entity)
-  if (!normalized || isCategoryKeyword(normalized) || isUrlOrDomainText(entity)) {
+  if (
+    !normalized
+    || isCategoryKeyword(normalized)
+    || isUrlOrDomainText(entity)
+    || isSourceOrSeriesEntity(entity)
+    || isLowSignalClusterText(entity)
+  ) {
     return false
   }
   if (/\b(of the year|the year|so far|year \d{4})\b/.test(normalized) || /[&-]$/.test(entity.trim())) {
@@ -297,86 +316,6 @@ function isSpecificEntity(entity: string): boolean {
   const originalTokens = entity.split(/\s+/).filter(Boolean)
   const hasUppercaseSignal = originalTokens.some((token) => /[A-Z]/.test(token[0]) || /^[A-Z0-9]{2,}$/.test(token))
   return hasUppercaseSignal && normalized.length >= 4 && !STOPWORDS.has(normalized)
-}
-
-function extractTitleEntities(title: string): string[] {
-  const cleanedTitle = title
-    .replace(/[“”‘’]/g, "'")
-    .replace(/[^\w\s'&.-]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-  const words = cleanedTitle.split(/\s+/).filter(Boolean)
-  const entities: string[] = []
-  const knownEntityPatterns = [
-    /\bA State of Trance 2026\b/i,
-    /\bEDC Las Vegas(?: 2026)?\b/i,
-    /\bMusic On Festival\b/i,
-    /\bSuperbooth 2026\b/i,
-  ]
-
-  for (const pattern of knownEntityPatterns) {
-    const match = cleanedTitle.match(pattern)
-    if (match) {
-      entities.push(normalizeEntity(match[0]))
-    }
-  }
-
-  for (let size = 4; size >= 2; size--) {
-    for (let index = 0; index <= words.length - size; index++) {
-      const phrase = normalizeEntity(words.slice(index, index + size).join(' '))
-      if (!isSpecificEntity(phrase)) {
-        continue
-      }
-      const normalized = normalizeText(phrase)
-      const categoryCount = normalized.split(' ').filter((token) => CATEGORY_KEYWORDS.has(token)).length
-      if (categoryCount >= size - 1) {
-        continue
-      }
-      entities.push(phrase)
-    }
-  }
-
-  return Array.from(new Set(entities))
-}
-
-function articleSetKey(articleIds: string[]): string {
-  return [...articleIds].sort().join('|')
-}
-
-function dedupeSuggestions(suggestions: SuggestionWithArticles[]): SuggestionWithArticles[] {
-  const bestByArticles = new Map<string, SuggestionWithArticles>()
-
-  for (const suggestion of suggestions) {
-    const key = articleSetKey(suggestion.articleIds)
-    const previous = bestByArticles.get(key)
-    const entityLength = suggestion.commonEntities?.[0]?.length ?? 0
-    const previousEntityLength = previous?.commonEntities?.[0]?.length ?? 0
-
-    if (!previous || suggestion.cohesionScore! > previous.cohesionScore! || entityLength > previousEntityLength) {
-      bestByArticles.set(key, suggestion)
-    }
-  }
-
-  return Array.from(bestByArticles.values())
-}
-
-function removeSubsetSuggestions(suggestions: SuggestionWithArticles[]): SuggestionWithArticles[] {
-  const selected: SuggestionWithArticles[] = []
-
-  for (const suggestion of suggestions) {
-    const ids = new Set(suggestion.articleIds)
-    const isSubset = selected.some((existing) => {
-      const existingIds = new Set(existing.articleIds)
-      return suggestion.articleIds.every((id) => existingIds.has(id))
-        && existing.articleIds.length > suggestion.articleIds.length
-    })
-
-    if (!isSubset && ids.size >= 2) {
-      selected.push({ ...suggestion, articleIds: Array.from(ids) })
-    }
-  }
-
-  return selected
 }
 
 function calculateCohesionScore(articleIds: string[], commonEntities: string[], rawArticles: RawArticle[]): number {
@@ -405,7 +344,15 @@ function isTierCOnlySuggestion(suggestion: Pick<Suggestion, 'articleIds'>, artic
     .map((id) => articleById.get(id))
     .filter((article): article is RawArticle => Boolean(article))
 
-  return articles.length >= 2 && articles.every((article) => article.sourceTier === 'C')
+  if (articles.length < 2) {
+    return false
+  }
+
+  const sourceNames = articles
+    .map((article) => article.sourceName)
+    .filter((name): name is string => Boolean(name))
+
+  return articles.every((article) => article.sourceTier === 'C') || isAllTierC(sourceNames)
 }
 
 function applySourcePolicy(suggestions: SuggestionWithArticles[], rawArticles: RawArticle[]): SuggestionWithArticles[] {
@@ -429,6 +376,9 @@ function normalizeSuggestion(
       .map((keyword) => String(keyword).trim())
       .filter((keyword) => keyword.length > 0)
       .filter((keyword) => !isCategoryKeyword(keyword))
+      .filter((keyword) => !isUrlOrDomainText(keyword))
+      .filter((keyword) => !isSourceOrSeriesEntity(keyword))
+      .filter((keyword) => !isLowSignalClusterText(keyword))
       .slice(0, 6)
   ))
   const commonEntities = Array.from(new Set(
@@ -443,7 +393,14 @@ function normalizeSuggestion(
     ? Math.round(suggestion.cohesionScore)
     : calculateCohesionScore(articleIds, commonEntities.length > 0 ? commonEntities : keywords, rawArticles)
 
-  if (!topic || isUrlOrDomainText(topic) || articleIds.length < 2 || cohesionScore < 60) {
+  if (
+    !topic
+    || isUrlOrDomainText(topic)
+    || isSourceOrSeriesEntity(topic)
+    || isLowSignalClusterText(topic)
+    || articleIds.length < 2
+    || cohesionScore < MIN_COHESION_SCORE
+  ) {
     return null
   }
 
@@ -460,58 +417,6 @@ function normalizeSuggestion(
     cohesionScore,
     articles: articleIds.map((id) => articleMeta.get(id)!).filter(Boolean),
   }
-}
-
-function fallbackTopicForEntity(entity: string): string {
-  const normalized = normalizeText(entity)
-  const topicMap: Record<string, string> = {
-    'a state of trance 2026': "Armin van Buuren 'A State of Trance 2026' 발매",
-    'edc las vegas': 'EDC 라스베이거스 2026 관련 소식',
-    'las vegas 2026': 'EDC 라스베이거스 2026 관련 소식',
-    'music on festival': 'Music On Festival 취소 사태',
-    'superbooth 2026': 'Superbooth 2026 신시사이저 신제품 공개',
-  }
-
-  return topicMap[normalized] ?? `${entity} 관련 소식`
-}
-
-function fallbackSuggestions(
-  articles: RawArticle[],
-  articleMeta: Map<string, { id: string; title: string; url: string }>
-): SuggestionWithArticles[] {
-  const groups = new Map<string, Map<string, RawArticle>>()
-
-  for (const article of articles) {
-    for (const entity of extractTitleEntities(article.title)) {
-      const key = normalizeText(entity)
-      const group = groups.get(key) ?? new Map<string, RawArticle>()
-      group.set(article.id, article)
-      groups.set(key, group)
-    }
-  }
-
-  const suggestions = Array.from(groups.entries())
-    .map(([entityKey, groupMap]) => {
-      const group = Array.from(groupMap.values())
-      const entity = extractTitleEntities(group[0].title)
-        .find((candidate) => normalizeText(candidate) === entityKey) ?? entityKey
-      const articleIds = group.slice(0, 8).map((article) => article.id)
-      const cohesionScore = calculateCohesionScore(articleIds, [entity], articles)
-      return {
-        topic: fallbackTopicForEntity(entity),
-        keywords: [entity],
-        articleIds,
-        reason: `"${entity}"가 여러 기사 제목에서 반복되어 같은 사건/행사/제품 후보로 판단했습니다.`,
-        commonEntities: [entity],
-        cohesionScore,
-        articles: articleIds.map((id) => articleMeta.get(id)!).filter(Boolean),
-      }
-    })
-    .filter((suggestion) => suggestion.articleIds.length >= 2 && suggestion.cohesionScore >= 60)
-
-  return removeSubsetSuggestions(dedupeSuggestions(suggestions)
-    .sort((a, b) => (b.cohesionScore ?? 0) - (a.cohesionScore ?? 0) || b.articleIds.length - a.articleIds.length)
-  ).slice(0, 5)
 }
 
 async function hydrateSuggestions(rows: DbSuggestedCluster[]): Promise<PersistedSuggestion[]> {
@@ -600,7 +505,9 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}))
-    const limit = typeof body.limit === 'number' && body.limit > 0 ? Math.min(body.limit, 100) : 50
+    const limit = typeof body.limit === 'number' && body.limit > 0
+      ? Math.min(body.limit, MAX_ANALYSIS_LIMIT)
+      : DEFAULT_ANALYSIS_LIMIT
 
     const { data: articles, error } = await supabase
       .from('raw_articles')
@@ -617,6 +524,7 @@ export async function POST(req: NextRequest) {
     }
 
     const rawArticles = await attachSourceMeta(articles as RawArticle[])
+    // Tier C 기사는 입력에서 제외하지 않는다. 최종 제안이 Tier C만으로 구성될 때만 차단한다.
     const articlesText = rawArticles
       .map((article) =>
         [
@@ -639,7 +547,7 @@ export async function POST(req: NextRequest) {
         prompt: `다음 기사 목록(${articles.length}개)을 분석해 토픽 그룹을 제안하세요.\n\n${articlesText}`,
         format: 'json',
         stream: false,
-        think: false,
+        think: true,
       }),
     })
 
@@ -671,11 +579,8 @@ export async function POST(req: NextRequest) {
     const llmSuggestions = applySourcePolicy((parsed.suggestions ?? [])
       .map((suggestion) => normalizeSuggestion(suggestion, validIds, articleMeta, rawArticles))
       .filter((suggestion): suggestion is SuggestionWithArticles => suggestion !== null), rawArticles)
-    const suggestions = llmSuggestions.length > 0
-      ? llmSuggestions
-      : applySourcePolicy(fallbackSuggestions(rawArticles, articleMeta), rawArticles)
-
-    const source = llmSuggestions.length > 0 ? 'llm' : 'fallback'
+    const suggestions = llmSuggestions
+    const source = 'llm'
 
     if (suggestions.length === 0) {
       return NextResponse.json({
