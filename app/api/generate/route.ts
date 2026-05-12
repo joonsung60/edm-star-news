@@ -213,6 +213,7 @@ async function generateKoreanArticle(articles: SourceArticle[]): Promise<Generat
     .join('\n\n---\n\n')
 
   const ollamaUrl = process.env.OLLAMA_BASE_URL || 'http://localhost:11434'
+  const ollamaModel = process.env.OLLAMA_MODEL || 'qwen3:14b'
   let lastError = '생성 실패'
 
   for (let attempt = 1; attempt <= 2; attempt++) {
@@ -224,7 +225,7 @@ async function generateKoreanArticle(articles: SourceArticle[]): Promise<Generat
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'qwen3:14b',
+        model: ollamaModel,
         system: SYSTEM_PROMPT_A,
         prompt: `아래 소스들을 참고해 한국어 뉴스 기사를 새로 작성하세요.
 

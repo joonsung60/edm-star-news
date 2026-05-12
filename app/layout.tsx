@@ -16,6 +16,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "EDM Star News",
   description: "한국어 EDM 뉴스 종합",
+  verification: {
+    google: "dBSG9LfIn9zB1n1Hu13rgD_RqKS5GeEknVNf9a2PlMg",
+  },
 };
 
 const NAV_ITEMS = [
