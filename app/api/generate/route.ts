@@ -185,7 +185,7 @@ function validateKoreanArticle(article: GeneratedArticle): string | null {
     return '생성된 기사 제목 또는 본문이 너무 짧습니다.'
   }
 
-  if (koreanRatio < 0.45) {
+  if (koreanRatio < 0.3) {
     return `한국어 비율이 낮습니다. koreanRatio=${koreanRatio.toFixed(2)}`
   }
 

@@ -106,6 +106,28 @@ export async function loadTaxonomyParams(): Promise<{
   }
 }
 
+export async function loadClusterImageUrl(clusterId: string | null): Promise<string | null> {
+  if (!clusterId) return null
+
+  const { data: caData } = await supabase
+    .from('cluster_articles')
+    .select('raw_article_id')
+    .eq('cluster_id', clusterId)
+
+  const rawIds = ((caData ?? []) as { raw_article_id: string }[])
+    .map((row) => row.raw_article_id)
+    .filter(Boolean)
+  if (rawIds.length === 0) return null
+
+  const { data: rawData } = await supabase
+    .from('raw_articles')
+    .select('image_url')
+    .in('id', rawIds)
+    .not('image_url', 'is', null)
+
+  return firstUsableImageUrl((rawData ?? []) as { image_url: string | null }[])
+}
+
 async function loadImagesByCluster(rows: ArticleRow[]): Promise<Map<string, string>> {
   const clusterIds = Array.from(
     new Set(rows.map((row) => row.cluster_id).filter((id): id is string => Boolean(id)))
@@ -134,7 +156,7 @@ async function loadImagesByCluster(rows: ArticleRow[]): Promise<Map<string, stri
 
   const imageByRawId = new Map<string, string>()
   for (const row of (rawData ?? []) as RawArticleImageRow[]) {
-    if (row.image_url) imageByRawId.set(row.id, row.image_url)
+    if (isUsableImageUrl(row.image_url)) imageByRawId.set(row.id, row.image_url)
   }
 
   for (const ca of clusterArticles) {
@@ -144,4 +166,19 @@ async function loadImagesByCluster(rows: ArticleRow[]): Promise<Map<string, stri
   }
 
   return imageByCluster
+}
+
+function firstUsableImageUrl(rows: { image_url: string | null }[]): string | null {
+  return rows.find((row) => isUsableImageUrl(row.image_url))?.image_url ?? null
+}
+
+function isUsableImageUrl(url: string | null): url is string {
+  if (!url) return false
+  if (!/^https?:\/\//i.test(url)) return false
+
+  const lower = url.toLowerCase()
+  // static.ra.co often rejects hotlinked image requests with Cloudflare 403.
+  if (lower.includes('static.ra.co/images/')) return false
+
+  return true
 }

@@ -1,6 +1,8 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { loadClusterImageUrl } from '@/lib/articles'
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const ARTICLE_SELECT =
@@ -14,6 +16,39 @@ export async function generateStaticParams() {
   return (data ?? []).map((row: { id: string; slug: string | null }) => ({
     slug: row.slug ?? row.id,
   }))
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>
+}): Promise<Metadata> {
+  const { slug } = await params
+  const { data } = await loadArticle(slug)
+
+  if (!data) {
+    return {
+      title: '기사 없음 | EDM Star News',
+      description: '한국어 EDM 뉴스 종합',
+    }
+  }
+
+  const description = createMetaDescription(data.content)
+  const imageUrl = await loadClusterImageUrl(data.cluster_id)
+    ?? extractFirstMarkdownImage(data.content)
+
+  return {
+    title: `${data.title} | EDM Star News`,
+    description,
+    openGraph: {
+      title: data.title,
+      description,
+      type: 'article',
+      publishedTime: data.published_at ?? data.created_at,
+      modifiedTime: data.updated_at ?? undefined,
+      images: imageUrl ? [{ url: imageUrl }] : undefined,
+    },
+  }
 }
 
 type ArticleDetail = {
@@ -79,6 +114,8 @@ export default async function ArticlePage({
   if (!data) notFound()
 
   const article = data
+  const heroImageUrl = await loadClusterImageUrl(article.cluster_id)
+    ?? extractFirstMarkdownImage(article.content)
   const showUpdated =
     article.published_at &&
     article.updated_at &&
@@ -113,6 +150,17 @@ export default async function ArticlePage({
           <h1 className="text-3xl font-bold leading-tight tracking-tight mb-8">
             {article.title}
           </h1>
+
+          {heroImageUrl && (
+            <figure className="mb-8 overflow-hidden rounded bg-zinc-100">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={heroImageUrl}
+                alt=""
+                className="w-full h-auto object-cover"
+              />
+            </figure>
+          )}
 
           <div className="text-base leading-relaxed text-zinc-800 space-y-4">
             {splitArticleBlocks(article.content).map((block, idx) => {
@@ -206,6 +254,24 @@ function splitArticleBlocks(text: string): ArticleBlock[] {
   })))
 
   return blocks
+}
+
+function createMetaDescription(content: string): string {
+  const normalized = content
+    .replace(/!\[[^\]]*\]\(https?:\/\/[^)\s]+\)/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  if (normalized.length <= 155) {
+    return normalized || '한국어 EDM 뉴스 종합'
+  }
+
+  return `${normalized.slice(0, 152).replace(/\s+\S*$/, '')}...`
+}
+
+function extractFirstMarkdownImage(content: string): string | null {
+  const match = content.match(/!\[[^\]]*\]\((https?:\/\/[^)\s]+)\)/)
+  return match?.[1] ?? null
 }
 
 function splitKoreanSentences(text: string): string[] {

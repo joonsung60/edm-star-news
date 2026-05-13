@@ -246,6 +246,14 @@ type PersistedSuggestion = {
 
 type ProcessingState = { state: 'pending' | 'success' | 'error'; message: string }
 
+type TopicBlockRule = {
+  id: string
+  pattern: string
+  reason: string | null
+  enabled: boolean
+  created_at: string
+}
+
 type AdminArticle = {
   id: string
   slug: string | null
@@ -279,6 +287,11 @@ function SuggestTab() {
   const [processing, setProcessing] = useState<string | null>(null)
   const [results, setResults] = useState<Record<string, ProcessingState>>({})
   const [lastGenSummary, setLastGenSummary] = useState('')
+  const [blockRules, setBlockRules] = useState<TopicBlockRule[]>([])
+  const [blockPattern, setBlockPattern] = useState('')
+  const [blockReason, setBlockReason] = useState('')
+  const [blockMessage, setBlockMessage] = useState('')
+  const [isBlocklistLoading, setIsBlocklistLoading] = useState(false)
 
   const load = useCallback(async (status: SubTab) => {
     setIsLoading(true)
@@ -299,9 +312,32 @@ function SuggestTab() {
     setIsLoading(false)
   }, [])
 
+  const loadBlockRules = useCallback(async () => {
+    setIsBlocklistLoading(true)
+    setBlockMessage('')
+    try {
+      const res = await fetch('/api/topic-suggestion-blocklist')
+      const data = await res.json()
+      if (data.error) {
+        setBlockMessage(data.error)
+        setBlockRules([])
+      } else {
+        setBlockRules((data.rules ?? []) as TopicBlockRule[])
+      }
+    } catch {
+      setBlockMessage('차단 규칙을 불러오지 못했습니다.')
+      setBlockRules([])
+    }
+    setIsBlocklistLoading(false)
+  }, [])
+
   useEffect(() => {
     load(subTab)
   }, [subTab, load])
+
+  useEffect(() => {
+    loadBlockRules()
+  }, [loadBlockRules])
 
   const patchStatus = async (id: string, body: Record<string, unknown>) => {
     const res = await fetch(`/api/suggest-clusters/${id}`, {
@@ -439,6 +475,80 @@ function SuggestTab() {
     setProcessing(null)
   }
 
+  const handleAddBlockRule = async () => {
+    const pattern = blockPattern.trim()
+    if (!pattern) return
+
+    setIsBlocklistLoading(true)
+    setBlockMessage('')
+    try {
+      const res = await fetch('/api/topic-suggestion-blocklist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pattern,
+          reason: blockReason.trim(),
+        }),
+      })
+      const data = await res.json()
+      if (data.error) {
+        setBlockMessage(data.error)
+      } else {
+        setBlockPattern('')
+        setBlockReason('')
+        setBlockMessage(`차단 규칙 추가: ${data.rule?.pattern ?? pattern}`)
+        await loadBlockRules()
+      }
+    } catch {
+      setBlockMessage('차단 규칙 추가 중 오류가 발생했습니다.')
+    }
+    setIsBlocklistLoading(false)
+  }
+
+  const handleToggleBlockRule = async (rule: TopicBlockRule) => {
+    setIsBlocklistLoading(true)
+    setBlockMessage('')
+    try {
+      const res = await fetch('/api/topic-suggestion-blocklist', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: rule.id,
+          enabled: !rule.enabled,
+        }),
+      })
+      const data = await res.json()
+      if (data.error) {
+        setBlockMessage(data.error)
+      } else {
+        await loadBlockRules()
+      }
+    } catch {
+      setBlockMessage('차단 규칙 변경 중 오류가 발생했습니다.')
+    }
+    setIsBlocklistLoading(false)
+  }
+
+  const handleDeleteBlockRule = async (rule: TopicBlockRule) => {
+    setIsBlocklistLoading(true)
+    setBlockMessage('')
+    try {
+      const res = await fetch(`/api/topic-suggestion-blocklist?id=${encodeURIComponent(rule.id)}`, {
+        method: 'DELETE',
+      })
+      const data = await res.json()
+      if (data.error) {
+        setBlockMessage(data.error)
+      } else {
+        setBlockMessage(`차단 규칙 삭제: ${rule.pattern}`)
+        await loadBlockRules()
+      }
+    } catch {
+      setBlockMessage('차단 규칙 삭제 중 오류가 발생했습니다.')
+    }
+    setIsBlocklistLoading(false)
+  }
+
   const emptyMessage =
     subTab === 'pending'
       ? '대기 중인 제안이 없습니다. 위 버튼으로 새 제안을 받아보세요.'
@@ -451,6 +561,80 @@ function SuggestTab() {
       <p className="text-gray-600 mb-6">
         최근 미사용 raw 기사를 LLM이 분석해 토픽 그룹을 제안합니다. 승인하면 기사 초안이 생성되고, 게시는 다음 탭에서 검토 후 진행합니다.
       </p>
+
+      <section className="mb-6 border rounded p-4">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="font-semibold">토픽 제안 차단 규칙</h2>
+            <p className="mt-1 text-sm text-gray-500">토픽, 키워드, 공통 근거에 포함되면 저장하지 않습니다.</p>
+          </div>
+          <button
+            type="button"
+            onClick={loadBlockRules}
+            disabled={isBlocklistLoading}
+            className="px-3 py-2 border border-gray-300 text-sm rounded font-semibold disabled:opacity-50"
+          >
+            새로고침
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_1fr_auto]">
+          <input
+            className="rounded border p-3 text-sm"
+            placeholder="차단 키워드 (예: catches up with)"
+            value={blockPattern}
+            onChange={(e) => setBlockPattern(e.target.value)}
+          />
+          <input
+            className="rounded border p-3 text-sm"
+            placeholder="메모 (선택)"
+            value={blockReason}
+            onChange={(e) => setBlockReason(e.target.value)}
+          />
+          <button
+            type="button"
+            onClick={handleAddBlockRule}
+            disabled={isBlocklistLoading || !blockPattern.trim()}
+            className="px-4 py-3 bg-black text-white text-sm rounded font-semibold disabled:opacity-50"
+          >
+            추가
+          </button>
+        </div>
+
+        {blockMessage && <p className="mt-3 text-sm text-gray-500">{blockMessage}</p>}
+
+        {blockRules.length > 0 && (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {blockRules.map((rule) => (
+              <div
+                key={rule.id}
+                className={`flex items-center gap-2 rounded border px-3 py-2 text-sm ${
+                  rule.enabled ? 'border-gray-300' : 'border-gray-200 text-gray-400'
+                }`}
+              >
+                <span className="font-medium">{rule.pattern}</span>
+                {rule.reason && <span className="text-xs text-gray-500">{rule.reason}</span>}
+                <button
+                  type="button"
+                  onClick={() => handleToggleBlockRule(rule)}
+                  disabled={isBlocklistLoading}
+                  className="text-xs text-gray-500 hover:text-black disabled:opacity-50"
+                >
+                  {rule.enabled ? '끄기' : '켜기'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteBlockRule(rule)}
+                  disabled={isBlocklistLoading}
+                  className="text-xs text-red-500 hover:text-red-700 disabled:opacity-50"
+                >
+                  삭제
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
 
       <div className="mb-6 flex flex-wrap items-center gap-3">
         <button

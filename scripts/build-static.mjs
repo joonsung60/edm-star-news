@@ -58,7 +58,7 @@ try {
   stash()
   // Use webpack: Turbopack in Next.js 16.2 silently no-ops `output: 'export'`
   // (build completes but no `out/` directory is produced).
-  const result = spawnSync('npx', ['next', 'build', '--webpack'], {
+  const result = spawnSync(process.execPath, ['node_modules/next/dist/bin/next', 'build', '--webpack'], {
     stdio: 'inherit',
     env: { ...process.env, BUILD_STATIC: '1' },
   })

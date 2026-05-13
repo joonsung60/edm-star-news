@@ -2,75 +2,135 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://edmstarnews.com/</loc>
-    <lastmod>2026-05-12T13:51:26.041Z</lastmod>
+    <lastmod>2026-05-13T03:49:37.940Z</lastmod>
     <changefreq>hourly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://edmstarnews.com/category/festival/</loc>
-    <lastmod>2026-05-12T13:51:26.047Z</lastmod>
+    <lastmod>2026-05-13T03:49:37.946Z</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://edmstarnews.com/category/artist/</loc>
-    <lastmod>2026-05-12T13:51:26.047Z</lastmod>
+    <lastmod>2026-05-13T03:49:37.946Z</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://edmstarnews.com/category/release/</loc>
-    <lastmod>2026-05-12T13:51:26.047Z</lastmod>
+    <lastmod>2026-05-13T03:49:37.946Z</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://edmstarnews.com/category/news/</loc>
-    <lastmod>2026-05-12T13:51:26.047Z</lastmod>
+    <lastmod>2026-05-13T03:49:37.946Z</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://edmstarnews.com/category/interview/</loc>
-    <lastmod>2026-05-12T13:51:26.047Z</lastmod>
+    <lastmod>2026-05-13T03:49:37.946Z</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://edmstarnews.com/genre/house/</loc>
-    <lastmod>2026-05-12T13:51:26.047Z</lastmod>
+    <lastmod>2026-05-13T03:49:37.946Z</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://edmstarnews.com/genre/techno/</loc>
-    <lastmod>2026-05-12T13:51:26.047Z</lastmod>
+    <lastmod>2026-05-13T03:49:37.946Z</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://edmstarnews.com/genre/trance/</loc>
-    <lastmod>2026-05-12T13:51:26.047Z</lastmod>
+    <lastmod>2026-05-13T03:49:37.946Z</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://edmstarnews.com/genre/drum-and-bass/</loc>
-    <lastmod>2026-05-12T13:51:26.047Z</lastmod>
+    <lastmod>2026-05-13T03:49:37.946Z</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://edmstarnews.com/genre/dubstep/</loc>
-    <lastmod>2026-05-12T13:51:26.047Z</lastmod>
+    <lastmod>2026-05-13T03:49:37.946Z</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://edmstarnews.com/genre/ambient/</loc>
-    <lastmod>2026-05-12T13:51:26.047Z</lastmod>
+    <lastmod>2026-05-13T03:49:37.946Z</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://edmstarnews.com/articles/bicep-live-royal-albert-hall-2/</loc>
+    <lastmod>2026-05-13T03:45:53.780Z</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://edmstarnews.com/articles/kaskade-meet-again-edc-las-veg/</loc>
+    <lastmod>2026-05-13T03:45:21.628Z</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://edmstarnews.com/articles/planetary-assault-systems-new/</loc>
+    <lastmod>2026-05-13T03:45:04.316Z</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://edmstarnews.com/articles/fred-again-thomas-bangalter-al/</loc>
+    <lastmod>2026-05-13T03:44:15.359Z</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://edmstarnews.com/articles/neopop-2026-lineup-announced/</loc>
+    <lastmod>2026-05-13T03:42:51.107Z</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://edmstarnews.com/articles/panz-eg-after-series-new-mix-2/</loc>
+    <lastmod>2026-05-13T03:41:56.256Z</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://edmstarnews.com/articles/rainbow-disco-club-2026-lineup/</loc>
+    <lastmod>2026-05-13T03:41:14.888Z</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://edmstarnews.com/articles/carl-cox-unvrs-ibiza-2026-resi/</loc>
+    <lastmod>2026-05-13T03:40:09.840Z</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://edmstarnews.com/articles/sports-illustrated-world-cup-e/</loc>
+    <lastmod>2026-05-13T03:39:28.479Z</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://edmstarnews.com/articles/overmono-pure-devotion-album-2/</loc>
+    <lastmod>2026-05-13T03:39:12.823Z</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
   </url>
   <url>
     <loc>https://edmstarnews.com/articles/deep-dish-gu49-dublin-mix-2026/</loc>

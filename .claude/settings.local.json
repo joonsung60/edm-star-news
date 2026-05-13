@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Bash(curl -s http://localhost:11434/api/tags)",
+      "Bash(curl -s -w \"\\\\nHTTP %{http_code}\\\\n\" -X POST http://localhost:11434/api/generate -H \"Content-Type: application/json\" -d '{\"model\":\"mistral-small3.2:24b\",\"prompt\":\"test\",\"stream\":false,\"think\":true}')",
+      "Bash(curl -s -w \"\\\\nHTTP %{http_code}\\\\n\" -X POST http://localhost:11434/api/generate -H \"Content-Type: application/json\" -d '{\"model\":\"mistral-small3.2:24b\",\"prompt\":\"reply with {\\\\\"approved\\\\\":false}\",\"stream\":false,\"format\":{\"type\":\"object\",\"properties\":{\"approved\":{\"type\":\"boolean\"}},\"required\":[\"approved\"]}}')"
     ]
   }
 }
