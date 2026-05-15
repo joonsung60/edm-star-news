@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { cleanArticleText, extractArticleText } from '@/lib/article-extraction'
 import { SYSTEM_PROMPT_A } from '@/lib/prompts'
+import { findGenre } from '@/lib/taxonomy'
 
 type SourceArticle = {
   title: string
@@ -19,7 +20,7 @@ type GeneratedArticle = {
   genre: string
 }
 
-const ALLOWED_CATEGORIES = ['페스티벌', '아티스트', '릴리즈', '뉴스', '인터뷰']
+const ALLOWED_CATEGORIES = ['페스티벌', '릴리즈', '뉴스']
 const SLUG_MAX_LENGTH = 30
 const DEFAULT_CATEGORY = '뉴스'
 const DEFAULT_GENRE = 'edm'
@@ -155,8 +156,12 @@ function normalizeCategory(raw: string): string {
 }
 
 function normalizeGenre(raw: string): string | null {
-  const trimmed = raw.trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
-  return trimmed.length > 0 ? trimmed : null
+  return findGenre(raw)?.slug ?? null
+}
+
+function normalizeGenreForCategory(category: string, raw: string): string {
+  if (category !== '릴리즈') return DEFAULT_GENRE
+  return normalizeGenre(raw) ?? DEFAULT_GENRE
 }
 
 async function ensureUniqueSlug(base: string): Promise<string> {
@@ -240,8 +245,8 @@ async function generateKoreanArticle(articles: SourceArticle[]): Promise<Generat
 - JSON 키는 "title", "content", "slug", "category", "genre" 다섯 개입니다.
 - title과 content는 한국어 기사체로 작성하세요.
 - slug: 영문 소문자와 하이픈만 사용하고 30자 이내. 기사 핵심 키워드 기반. 예: "martin-garrix-new-album-2026"
-- category: "페스티벌", "아티스트", "릴리즈", "뉴스", "인터뷰" 다섯 개 중에서 가장 적합한 하나를 정확히 그 한국어 문자열 그대로 사용하세요.
-- genre: house, techno, trance, drum-and-bass, dubstep, ambient, experimental, hardstyle, future-bass, big-room 등 EDM 장르 중 가장 적합한 하나를 영문 소문자로 작성하세요. 장르를 특정하기 어렵다면 "edm"으로 두세요.
+- category: "페스티벌", "릴리즈", "뉴스" 셋 중 하나만 정확히 사용하세요. 페스티벌/행사/공연/레지던시는 "페스티벌", 신곡/앨범/EP/믹스/리믹스/컴필레이션 발매는 "릴리즈", 그 외는 모두 "뉴스"입니다.
+- genre: category가 "릴리즈"일 때만 "house", "techno", "trance", "drum-and-bass", "dubstep", "ambient" 중 하나를 사용하세요. 이 목록 중 특정하기 어렵거나 category가 "페스티벌" 또는 "뉴스"이면 반드시 "edm"으로 두세요.
 ${retryGuidance}
 
 ${articlesText}
@@ -342,7 +347,7 @@ export async function POST(req: NextRequest) {
       const generated = await generateKoreanArticle(usableArticles)
       const slug = await ensureUniqueSlug(normalizeSlug(generated.slug))
       const category = normalizeCategory(generated.category)
-      const genre = normalizeGenre(generated.genre) ?? DEFAULT_GENRE
+      const genre = normalizeGenreForCategory(category, generated.genre)
 
       // articles 테이블에 저장
       const { data, error } = await supabase

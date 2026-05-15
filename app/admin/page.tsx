@@ -1,6 +1,5 @@
 'use client'
 
-import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 import type { PercentCrop } from 'react-image-crop'
 import { ImageCropper, getCroppedDataUrl } from '@/components/ImageCropper'
@@ -1312,6 +1311,10 @@ function ArticlesReviewTab() {
     setProcessing(null)
   }
 
+  const handleReview = (article: AdminArticle) => {
+    window.open(`/articles/${article.slug ?? article.id}`, '_blank', 'noopener,noreferrer')
+  }
+
   const handleSaveReplacementImage = async (article: AdminArticle) => {
     if (!replacementImageDataUrl) {
       setError('교체할 이미지를 선택하세요.')
@@ -1487,7 +1490,7 @@ function ArticlesReviewTab() {
                         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                           <input
                             className="w-full rounded border p-3 text-sm"
-                            placeholder="카테고리 (예: 페스티벌, 아티스트, 신보)"
+                            placeholder="카테고리 (페스티벌, 릴리즈, 뉴스)"
                             value={editCategory}
                             onChange={(e) => setEditCategory(e.target.value)}
                           />
@@ -1573,13 +1576,13 @@ function ArticlesReviewTab() {
                       </>
                     ) : (
                       <>
-                        <Link
-                          href={`/articles/${article.slug ?? article.id}`}
-                          target="_blank"
+                        <button
+                          type="button"
+                          onClick={() => handleReview(article)}
                           className="px-3 py-2 border border-gray-300 text-gray-600 text-sm rounded font-semibold hover:bg-gray-50 whitespace-nowrap"
                         >
                           검토
-                        </Link>
+                        </button>
                         <button
                           onClick={() => startEdit(article)}
                           disabled={processing !== null || editingId !== null || replacingId !== null}

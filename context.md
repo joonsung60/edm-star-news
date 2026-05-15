@@ -1,67 +1,83 @@
-# EDM Star News Korea - 현재 프로젝트 컨텍스트
+# EDM Star News - 현재 프로젝트 컨텍스트
 
-이 문서는 현재 프로젝트 상태를 빠르게 공유하기 위한 브리핑이다. 웹 Claude/ChatGPT와 논의할 때 이 파일을 붙여넣으면 전체 구조와 남은 의사결정을 이해할 수 있어야 한다.
+이 문서는 프로젝트 상태를 웹 Claude/ChatGPT와 공유하기 위한 브리핑이다. 세부 구현을 전부 설명하기보다, 현재 구조와 중요한 판단을 빠르게 이해하는 것이 목적이다.
 
 ## 1. 프로젝트 목적
 
-영문 EDM/전자음악 매체의 RSS 또는 개별 URL을 수집하고, 관련 원문들을 묶어 로컬 LLM으로 한국어 종합 기사를 생성한 뒤 공개 뉴스 사이트에 게시한다.
+EDM/전자음악 관련 해외 소스(RSS, 개별 URL, SNS/포스터 이미지)를 바탕으로 한국어 EDM 뉴스 기사를 생성하고, 사람이 검토한 뒤 `edmstarnews.com`에 게시한다.
 
-핵심 흐름:
+현재 기사 생성 경로는 두 가지다.
 
-1. 원문 수집: RSS 또는 URL 직접 추가
-2. 자동 토픽 제안 (2단계):
-   - Stage 1: 코드가 `lib/edm-entities.json`(아티스트 500 + 페스티벌 140 + 레이블 117)을 사전으로 raw article에서 엔터티 매칭 → 후보 클러스터 생성 (단독 기사도 가능)
-   - Stage 2: 후보마다 Ollama 모델(env-driven, 현재 `mistral-small3.2:24b`)에 "한국어 EDM 기사로 작성할 가치가 있는가?" 질의 → 승인된 것만 저장
-3. 인간 검토: 제안 승인 또는 거절
-4. 기사 생성: 승인된 토픽으로 한국어 기사 초안 생성
-5. 인간 검토: 초안 수정/삭제/게시
-6. 공개 배포: 게시된 기사만 Cloudflare Pages 정적 사이트에 반영
+1. **RSS/URL 기반**
+   - RSS 또는 URL로 원문 기사 수집
+   - 자동 토픽 제안 또는 수동 클러스터 생성
+   - 클러스터 기반 한국어 기사 초안 생성
+   - 사람이 수정/삭제/게시
+
+2. **이미지/SNS 기반**
+   - SNS 캡처/포스터 이미지 1개 업로드
+   - Vision LLM이 원본 전체 이미지를 분석
+   - 분석 결과 확인
+   - 선택적으로 기사 이미지 영역 크롭
+   - 이미지 1개를 근거로 기사 초안 1개 생성
+   - 사람이 수정/삭제/게시
 
 ## 2. 현재 아키텍처
 
-### 로컬 어드민/생성 환경
+### 로컬 어드민
 
-- `npm run dev`로 로컬 Next.js 서버 실행 (`--webpack` 강제)
-- `/admin`에서 수집, 토픽 제안, 기사 생성, 검토, 게시 작업 수행
-- Ollama 모델은 `OLLAMA_MODEL` 환경변수로 지정. 현재 `mistral-small3.2:24b`. suggest-clusters는 `SUGGEST_MODEL` 별도 오버라이드 가능.
-- `OLLAMA_BASE_URL=http://localhost:11434` — 운용 환경에 맞게 사용. WSL ↔ Windows Ollama 사용 시 게이트웨이 IP(예: `172.x.x.1`) 필요.
-- Supabase에 raw article, cluster, generated article 저장
-- `/admin/*`은 `proxy.ts`(Next.js 16에서 middleware의 새 이름)와 HMAC 쿠키 세션으로 보호
+- `npm run dev`로 로컬 Next.js 실행
+- Next.js 16.2.6이며 dev/build 모두 webpack 사용
+- `/admin`에서 수집, 분석, 기사 생성, 검토, 게시 수행
+- Ollama는 로컬에서만 사용
+- Supabase에 원문, 이미지 소스, 기사 초안, 게시 기사 저장
+- `/admin/*`은 로컬에서 `proxy.ts`와 쿠키 세션으로 보호
 
 ### 공개 사이트
 
 - `edmstarnews.com`
-- Cloudflare Pages 정적 export
-- 공개 사이트는 Supabase의 `articles.published = true` 기사만 빌드 타임에 읽어 정적 HTML로 생성
-- 배포본은 Ollama를 사용하지 않음
-- 배포본에는 API routes가 없음
-
-### 중요한 현재 결정
-
-- 기사 생성과 관리는 로컬에서 한다.
-- 공개 사이트는 정적 뉴스 사이트로만 사용한다.
-- 배포본에 `/admin`을 포함할지 여부는 아직 보안상 의사결정이 필요하다.
-  - 현재 `scripts/build-static.mjs`는 `app/admin`, `app/api`, `proxy.ts` 셋 다 정적 빌드 전에 stash로 제외한다. 즉 배포본에는 `/admin`이 없다.
-  - 정적 배포에 `/admin`을 다시 포함하고 진짜 인증을 원하면 Cloudflare Access 같은 외부 보호가 필요하다.
-  - 클라이언트 비밀번호 화면은 우회 가능하므로 진짜 보안으로 보지 않는다.
+- Cloudflare Pages static export
+- 공개 사이트는 Supabase에서 `articles.published = true` 기사만 빌드 타임에 읽어 정적 HTML로 생성
+- 배포본에는 Ollama, API routes, proxy, admin UI가 없다
+- 현재 `scripts/build-static.mjs`가 정적 빌드 전에 `app/admin`, `app/api`, `proxy.ts`를 stash로 제외한다
 
 ## 3. 기술 스택
 
 - Next.js 16.2.6 App Router
 - React 19
-- Supabase PostgreSQL
-- Ollama (모델은 `OLLAMA_MODEL` env-driven, 현재 `mistral-small3.2:24b`. 폴백 하드코딩 default는 `qwen3:14b`)
-- Cloudflare Pages static export
 - Tailwind CSS
+- Supabase PostgreSQL + Storage
+- Ollama
+- Cloudflare Pages static export
+- `react-image-crop` (어드민 이미지 크롭 UI)
 
-Next.js 16 관련 주의:
+주의:
 
-- Next.js 16에서 `middleware.ts`가 `proxy.ts`로 이름이 바뀌었다(함수명도 `middleware` → `proxy`). 이 프로젝트는 `proxy.ts`를 사용한다.
-- 동적 route handler의 `params`는 Promise로 처리한다.
-- 정적 export에서는 proxy/API routes가 실행되지 않는다.
-- Turbopack은 `output:'export'`를 silently 무시한다. 정적 빌드는 `next build --webpack`을 강제한다. `npm run dev`도 `--webpack`을 사용하도록 설정돼 있다.
+- Next.js 16에서는 `middleware.ts` 대신 `proxy.ts`를 사용한다.
+- 동적 route handler의 `params`는 Promise다.
+- 정적 export에서는 API route/proxy가 실행되지 않는다.
+- Turbopack은 이 프로젝트의 static export에서 문제가 있어 `--webpack`을 사용한다.
 
-## 4. 주요 DB 테이블
+## 4. 환경 변수
+
+로컬 `.env.local`:
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `OLLAMA_BASE_URL`
+- `OLLAMA_MODEL` (일반 기사 생성 기본 모델. 미설정 시 코드 default는 `qwen3:14b`)
+- `SUGGEST_MODEL` (자동 토픽 제안 전용. 미설정 시 `OLLAMA_MODEL`로 폴백)
+- `ADMIN_PASSWORD`
+- `CLOUDFLARE_DEPLOY_HOOK_URL`
+
+Cloudflare Pages:
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+
+Cloudflare 배포본에는 `OLLAMA_BASE_URL`, `OLLAMA_MODEL`, `ADMIN_PASSWORD`가 필요 없다.
+
+## 5. 주요 DB/Storage
 
 ### `rss_sources`
 
@@ -69,7 +85,7 @@ RSS 소스 목록.
 
 ### `raw_articles`
 
-수집된 원문 기사.
+RSS/URL로 수집된 원문 기사.
 
 주요 컬럼:
 
@@ -79,27 +95,24 @@ RSS 소스 목록.
 - `url`
 - `image_url`
 - `source_id`
-- `author`
 - `published_at`
 
-### `article_clusters`
+### `article_clusters` / `cluster_articles`
 
-토픽별 원문 기사 묶음.
+RSS/URL 기사들을 토픽별로 묶는 클러스터 구조.
 
-주요 컬럼:
+### `suggested_clusters`
 
-- `id`
-- `topic`
-- `keywords`
+자동 토픽 제안 저장 테이블.
 
-### `cluster_articles`
+`status`:
 
-클러스터와 raw article 연결.
+- `pending`: 검토 전
+- `approved`: 승인 처리 중
+- `rejected`: 거절
+- `published`: 제안 승인 후 기사 초안 생성 완료
 
-주요 컬럼:
-
-- `cluster_id`
-- `raw_article_id`
+주의: 여기서 `published`는 공개 게시가 아니다. 공개 게시 여부는 `articles.published`.
 
 ### `articles`
 
@@ -111,374 +124,475 @@ RSS 소스 목록.
 - `title`
 - `content`
 - `cluster_id`
+- `image_url`
 - `published`
 - `published_at`
-- `updated_at` (게시 후 수정 시점 추적용. 초기 NULL, PATCH 호출마다 now())
+- `updated_at`
 - `created_at`
-- `slug` (URL 슬러그. 영문 소문자+하이픈, 30자 이내. 충돌 시 `-2`, `-3` 등 suffix)
-- `category` (페스티벌/아티스트/릴리즈/뉴스/인터뷰 중 하나)
-- `genre` (house, techno, trance 등 영문 소문자. 미상이면 `edm`)
-- `tags` (미사용)
-- `embed_url`, `source_platform` (미사용 / 향후 임베드용)
+- `slug`
+- `category`
+- `genre`
 
-현재 공개 사이트는 `published=true` 기사만 보여준다.
+이미지 우선순위:
 
-### `suggested_clusters`
+1. `articles.image_url`
+2. 없으면 `cluster_id → cluster_articles → raw_articles.image_url`
+3. 없으면 본문 markdown 이미지
 
-자동 토픽 제안 저장 테이블.
+이미지/SNS 기반 기사는 `articles.image_url`에 직접 이미지가 저장된다.
 
-현재 코드가 사용하는 컬럼:
+### `image_sources`
+
+이미지/SNS 기반 기사 생성을 위한 소스 테이블.
+
+주요 컬럼:
 
 - `id`
-- `topic`
-- `keywords`
-- `article_ids`
+- `image_url`
+- `image_path`
+- `source_memo`
+- `source_date`
+- `extracted_text`
+- `generated_article_id`
 - `status`
-- `cluster_id`
 - `created_at`
 
-`status` 의미:
+`generated_article_id`는 `articles.id`를 참조한다. 기사 삭제 시 참조를 `null`로 풀어야 한다. DB FK는 가능하면 `on delete set null` 권장.
 
-- `pending`: 검토 전
-- `approved`: 승인 처리 중간 상태
-- `rejected`: 거절됨
-- `published`: 제안 승인 후 기사 생성까지 완료됨
+### Supabase Storage
 
-주의: 여기서 `published`는 공개 사이트 게시가 아니다. 공개 게시 여부는 `articles.published`가 결정한다.
+Bucket:
 
-## 5. 주요 파일과 역할
+- `image-sources`
+
+용도:
+
+- 이미지/SNS 원본 저장
+- 크롭된 기사용 이미지 저장
+- 기사 이미지 교체용 이미지 저장
+
+## 6. 주요 파일
+
+### 공개 사이트
 
 ```txt
+app/page.tsx
+  공개 홈. published 기사 목록과 인기 기사 목록 표시.
+  loadPublishedArticles()를 통해 articles.image_url 우선 썸네일 사용.
+
+app/articles/[slug]/page.tsx
+  기사 상세. slug 우선 조회, UUID fallback.
+  본문 상단 이미지와 OG image 모두 articles.image_url 우선 사용.
+
+app/category/[category]/page.tsx
+app/genre/[genre]/page.tsx
+  카테고리/장르별 기사 목록.
+
+components/ArticleList.tsx
+  공개 기사 목록 UI.
+
+lib/articles.ts
+  published 기사 로딩, 카테고리/장르 필터, 이미지 fallback 처리.
+```
+
+### 어드민
+
+```txt
+app/admin/page.tsx
+  로컬 어드민 UI.
+  두 그룹:
+  - RSS 및 URL 기반 기사 생성
+  - 이미지 소스 및 SNS 기반 기사 생성
+
+app/admin/login/page.tsx
+  어드민 로그인 UI.
+
+app/api/admin/login/route.ts
+  ADMIN_PASSWORD 검증, 쿠키 발급, IP 기반 실패 제한.
+
 proxy.ts
-  Next.js 16 proxy(구 middleware). 로컬 /admin/* 보호. HMAC admin_session 쿠키 검증.
+  Next.js 16 proxy. 로컬 /admin 보호.
 
 lib/admin-session.ts
-  HMAC-SHA256 기반 admin_session 쿠키 sign/verify (Web Crypto).
+  admin_session 쿠키 sign/verify.
+```
+
+### RSS/URL 파이프라인
+
+```txt
+app/api/collect/route.ts
+  RSS 수집과 URL 직접 추가.
+
+app/api/suggest-clusters/route.ts
+  자동 토픽 제안. 엔터티 매칭 + LLM 가치 평가 구조.
+
+app/api/suggest-clusters/[id]/route.ts
+  제안 status/cluster_id PATCH.
+
+app/api/cluster/route.ts
+  수동/자동 클러스터 생성.
+
+app/api/generate/route.ts
+  클러스터 기반 한국어 기사 생성.
+
+app/api/raw-articles/backfill-titles/route.ts
+  과거 URL형 title 재추출/보정용.
+```
+
+### 이미지/SNS 파이프라인
+
+```txt
+app/api/image-sources/analyze/route.ts
+  이미지 원본을 Storage에 저장하고 Vision LLM으로 전체 이미지 분석.
+  모델은 현재 mistral-small3.2:24b.
+
+app/api/image-sources/[id]/generate/route.ts
+  image_sources.extracted_text 기반 기사 초안 생성.
+  optional imageBase64가 있으면 크롭 이미지를 Storage에 저장 후 articles.image_url로 사용.
+  없으면 원본 image_sources.image_url 사용.
+
+app/api/image-sources/[id]/route.ts
+  image_sources status 업데이트. 기각 등에 사용.
+
+app/api/articles/[id]/image/route.ts
+  생성 기사 검토 탭의 이미지 교체 API.
+  새 이미지/크롭 이미지를 Storage에 저장하고 articles.image_url 업데이트.
+```
+
+### 배포/정적 파일
+
+```txt
+scripts/build-static.mjs
+  public 정적 파일 생성 → app/admin, app/api, proxy.ts stash → next build --webpack → 복원.
+
+scripts/generate-static-files.mjs
+  sitemap.xml, robots.txt, llms.txt 생성.
 
 next.config.ts
   BUILD_STATIC=1일 때 output:'export', trailingSlash, images.unoptimized 설정.
-
-scripts/build-static.mjs
-  Cloudflare Pages 정적 빌드 스크립트.
-  app/admin, app/api, proxy.ts를 .cf-build-stash로 임시 이동 → next build --webpack → 복원.
-  현재 app/admin도 stash 대상이라 배포본에는 어드민 UI 자체가 없다.
-
-app/layout.tsx
-  사이트 공통 헤더와 네비게이션 (홈|페스티벌|아티스트|릴리즈|뉴스|인터뷰|장르별 ▾,
-  현재 모두 더미 링크). Google Search Console verification 메타 태그를 metadata
-  API의 verification.google 필드로 박아둠.
-
-app/page.tsx
-  공개 홈. published 기사 최대 20개를 published_at desc로 표시.
-  기사 링크는 slug 우선(`slug ?? id`).
-  썸네일은 cluster -> raw article image_url에서 가져온다.
-
-app/articles/[slug]/page.tsx
-  공개 기사 상세. params는 단일 [slug] 세그먼트지만 slug가 일치하지 않으면
-  UUID 패턴일 때 한해 id로 fallback 조회. generateStaticParams는 published
-  기사마다 slug ?? id 하나씩 emit. updated_at이 published_at과 다르면
-  "수정됨" 라벨 표시.
-
-app/robots.ts
-  /robots.txt. 모든 경로 허용 + sitemap URL 명시.
-
-app/admin/page.tsx
-  로컬 어드민 UI. 6개 탭. RSS 수집 탭은 is_active=true인 소스 수를 클라이언트에서
-  Supabase로 직접 조회해 동적으로 표시.
-
-app/admin/login/page.tsx
-  어드민 로그인 폼.
-
-app/api/admin/login/route.ts
-  ADMIN_PASSWORD 검증, 쿠키 발급, IP 기반 실패 제한(5회 / 15분, in-memory).
-
-app/api/collect/route.ts
-  RSS 수집과 URL 직접 추가. 제목/본문/이미지 추출.
-
-app/api/suggest-clusters/route.ts
-  자동 토픽 제안 생성/조회. 2단계 구조(엔터티 매칭 → LLM 가치 평가).
-  entity dict 로드 실패 시 단일 LLM 경로로 fallback.
-
-app/api/suggest-clusters/[id]/route.ts
-  토픽 제안 status/cluster_id PATCH.
-
-app/api/cluster/route.ts
-  articleIds 또는 keywords 기반 클러스터 생성. matchMode or/and 지원.
-
-app/api/generate/route.ts
-  한국어 기사 생성. 클러스터 원문을 정제 후 OLLAMA_MODEL(default qwen3:14b)
-  에 전달. LLM 응답에서 title/content/slug/category/genre 추출. slug는
-  normalize + DB 중복 검사 후 -2, -3 suffix로 유일화. articles에 INSERT.
-
-app/api/articles/route.ts
-  생성 기사 목록 조회. published 필터 지원.
-
-app/api/articles/[id]/route.ts
-  기사 PATCH 수정 / DELETE 삭제. PATCH는 published 여부 무관하게 허용
-  (게시 후 수정 가능). PATCH 시 updated_at=now() 세팅. published=true 기사
-  PATCH 성공 시 CLOUDFLARE_DEPLOY_HOOK_URL fire-and-forget POST. DELETE는
-  여전히 published=true 차단.
-
-app/api/articles/[id]/publish/route.ts
-  published=true, published_at=now() 업데이트 후 CLOUDFLARE_DEPLOY_HOOK_URL로
-  fire-and-forget POST.
-
-app/api/raw-articles/backfill-titles/route.ts
-  과거 URL형 title 데이터를 재추출/보정하기 위한 backfill API.
-
-lib/article-extraction.ts
-  HTML 제목/본문/이미지 추출과 텍스트 정제(cleanArticleText).
-
-lib/prompts.ts
-  SYSTEM_PROMPT_A — 기사 생성 시스템 프롬프트. 상대 날짜 표현 금지 + 고유명사
-  표기 규칙(영문 기본, 한국 정착 표기만 예외, 임의 한글 음역 절대 금지) 포함.
-  SYSTEM_PROMPT_B — 미작성.
-
-lib/edm-entities.json
-  EDM 엔터티 사전. artists_top500_relevance_2024_2025(500),
-  major_edm_festivals_worldwide(140), edm_labels_key_artists(117).
-  실제 파일명은 'lib/ edm-entities.json'(선행 공백). suggest-clusters 코드가 여러
-  후보 경로를 시도한다.
 ```
 
-## 6. 어드민 UI 탭
+## 7. 어드민 UI 현재 구조
 
-1. **RSS 수집**
-   - 등록 RSS 소스에서 새 기사 수집
-   - is_active=true인 소스 수를 실시간 조회해 "N개 RSS 소스에서 ..." 표기
-   - 실패 소스 표시
+### 그룹 1: RSS 및 URL 기반 기사 생성
 
-2. **URL 직접 추가**
-   - URL을 줄 단위로 넣어 원문 수집
+탭:
 
-3. **자동 토픽 제안**
-   - 최근 raw article(published_at desc, 최대 500개)에서 엔터티 사전 매칭
-   - 매칭된 엔터티 가중치 합 >= 0.6인 후보 클러스터 생성(단독 기사 포함)
-   - 각 후보를 LLM에 가치 질의 → 승인된 것만 저장
-   - 승인 시 인간이 다시 "승인 & 기사 생성" 또는 "거절"
-   - "승인 & 기사 생성" 클릭하면 클러스터 생성 + 기사 생성까지 자동 진행
+1. RSS 수집
+2. URL 직접 추가
+3. 자동 토픽 제안
+4. 생성 기사 검토
+5. 클러스터 수동
+6. 기사 생성 수동
 
-4. **생성 기사 검토**
-   - 생성된 초안 + 게시본 모두 목록 표시 (서브탭: 게시 대기 / 게시됨)
-   - 수정 버튼은 두 서브탭 모두에서 활성 (게시 후 수정 가능)
-   - 게시/삭제 버튼은 초안 전용
-   - 게시 버튼은 published=true + published_at=now() + Cloudflare 재빌드 트리거
-   - 게시본 수정 시에도 updated_at 세팅 + Cloudflare 재빌드 트리거
+### 그룹 2: 이미지 소스 및 SNS 기반 기사 생성
 
-5. **클러스터 수동 생성**
-   - 토픽/키워드로 수동 클러스터 생성
+탭:
 
-6. **기사 수동 생성**
-   - 클러스터 ID를 직접 넣어 기사 생성
+1. 이미지 소스 추가
+   - 이미지 업로드
+   - 소스 메모/날짜 입력
+   - Vision 분석
+   - 분석 결과 미리보기
+   - 선택적 크롭
+   - 기사 초안 생성
 
-## 7. 자동 토픽 제안 정책
+2. 생성 기사 검토
+   - 기존 검토 탭 재사용
+   - 기사 수정/삭제/게시
+   - 이미지 교체 지원
 
-목표는 "한국어 EDM 뉴스 기사로 작성할 가치가 있는 raw article 후보를 찾는 것". 단독 기사여도 구체적 사건/릴리즈/행사/인물/제품을 다루면 통과한다.
+이미지 크롭은 `react-image-crop` 기반으로 클로드 코드가 안정화했다. 이전 직접 구현 cropper는 `RangeError: Maximum call stack size exceeded` 문제가 있어 폐기하는 방향이다.
 
-### 2단계 구조
+## 8. Vision 분석 프롬프트
 
-**Stage 1 — 코드 기반 후보 클러스터 생성 (`buildCandidateClusters`):**
+위치:
 
-- `lib/edm-entities.json` 로드: 아티스트(weight 1.0, name+aliases), 페스티벌(weight 1.0, name), 레이블(weight 0.6, name).
-- 각 raw article에 대해 title + content 첫 200자 lowercase에서 entity surface를 word-boundary로 매칭.
-- 역인덱스 (entity → article ids) 구축 후 같은 entity를 공유하는 기사 묶음을 후보 클러스터로 생성. 단독 기사도 후보가 된다.
-- 동일 articleIds 집합은 dedupe.
-- 필터: 후보의 shared entity weight sum >= 0.6 (단일 아티스트=1.0, 단일 페스티벌=1.0, 단일 레이블=0.6 모두 통과).
-- ~~기사 수 < 2 필터~~, ~~도메인 다양성 필터~~, ~~72시간 freshness 필터~~ — 모두 제거됨.
+```txt
+app/api/image-sources/analyze/route.ts
+createVisionPrompt()
+```
 
-**Stage 2 — 후보별 LLM 가치 평가 (`approveCandidateWithLlm`):**
+현재 구조:
 
-- 후보 1개당 Ollama 호출 1회 (순차 처리).
-- 모델 선택 순서: `SUGGEST_MODEL` → `OLLAMA_MODEL` → 하드코딩 default `qwen3:14b`.
-- system prompt(`SUGGEST_SYSTEM`)가 카테고리/매체명/연도/인터뷰 패턴 거부 규칙을 강제.
-- user prompt는 "이 기사가 한국어 EDM 뉴스 기사로 작성할 만한 가치가 있는가? yes면 topic과 keywords 반환, no면 approved: false 반환".
-- Ollama `format` 파라미터로 `{approved, topic?, keywords?, reason?}` 스키마 강제.
-- approved=true만 `normalizeSuggestion`에 전달.
+1. 제외할 것: UI 잡음
+   - 상태바, 좋아요/댓글 수, 재생 중 음악, 팔로우 버튼 등
 
-**`normalizeSuggestion` 후검증:**
+2. 추출할 것: 기사화에 필요한 팩트
+   - 아티스트명, 이벤트명, 날짜, 장소, 라인업, 캡션 핵심 문구 등
 
-- 빈 topic 거절. topic이 URL/도메인/매체-시리즈명/low-signal 패턴이면 거절.
-- articleIds 수 >= 1이어야 통과 (단독 기사 허용).
-- Stage 2 승인 후보는 cohesionScore=50을 강제 부여 (MIN_COHESION_SCORE=20 통과).
-- keywords와 commonEntities가 모두 비면 거절.
+3. 주의사항
+   - 계정명과 실제 아티스트명 구분
+   - 이미지에 없는 연도 추측 금지
+   - 대문자 디자인 표기 정규화
+   - 불명확한 내용은 "불명확" 표시
 
-**Fallback:** entity dict 로드 실패 시 `runLlmOnlyPath`로 빠짐. 기존 단일 LLM 호출(`{suggestions:[...]}` 다건 반환) 흐름 유지. 응답에 `source: 'llm'`.
+4. 응답 형식
+   - 항목별 추출 결과
 
-### 정책 상수
+중요한 정책:
 
-- DEFAULT_ANALYSIS_LIMIT = MAX_ANALYSIS_LIMIT = 500 (Supabase에서 가져오는 raw article 상한)
-- MIN_COHESION_SCORE = 20 (normalize 후검증)
-- MIN_ENTITY_WEIGHT_SUM = 0.6 (Stage 1 통과 기준)
-- STAGE2_DEFAULT_COHESION = 50 (Stage 2 승인 시 강제 부여)
+- Vision 분석은 항상 크롭 전 원본 전체 이미지로 수행한다.
+- 크롭은 기사 이미지 용도일 뿐 분석 입력에는 쓰지 않는다.
+- `기사화 판단` 항목은 제거했다.
 
-### 거절 규칙(시스템 프롬프트로 강제)
+## 9. 기사 생성 정책
 
-- 카테고리 단어만으로는 절대 승인 금지: festival, synth, preview, release, new music, house, techno, club, lineup 등
-- 매체명/사이트명/시리즈명 묶음 금지
-- 연도 단독(2025, 2026 등) 묶음 금지
-- 인터뷰 형식 표현(catches up with, chats to, talks to 등) 묶음 금지
-- 연말 결산/차트/베스트 목록 묶음 금지
-- 모든 소스를 동등하게 취급
+### RSS/URL 기반
 
-### 현재 미구현/주의
+`app/api/generate/route.ts`가 클러스터 원문들을 정제해 Ollama에 전달한다.
 
-- raw article의 사용 여부(is_used 같은 컬럼)는 없다. 같은 article이 여러 번 Stage 1 후보로 반복될 수 있다. 향후 `suggested_clusters.article_ids`에 이미 들어간 raw article을 제외하는 dedupe가 필요할 수 있다.
+LLM 응답 필드:
 
-## 8. 기사 생성 정책
+- `title`
+- `content`
+- `slug`
+- `category`
+- `genre`
 
-`/api/generate`는 클러스터에 묶인 원문들을 정제해서 Ollama 모델(env-driven, 현재 mistral-small3.2:24b)에 전달한다.
+검증:
 
-LLM 입력에 포함되는 정보:
+- 너무 짧은 기사 실패
+- 한국어 비율 낮으면 실패
+- Login/Search/Share/Previous article 등 원문 페이지 잡음이 있으면 실패
+- 실패 시 1회 재시도
 
-- 매체명
-- 발행일 (한국어 'YYYY년 M월 D일' 포맷으로 정규화 후 주입)
-- 원문 제목
-- 원문 URL
-- 정제된 원문 내용
+### 이미지/SNS 기반
 
-LLM이 반환해야 하는 JSON 5개 필드: `title`, `content`, `slug`, `category`, `genre`.
+`app/api/image-sources/[id]/generate/route.ts`가 Vision 분석 결과를 바탕으로 기사 초안을 만든다.
 
-- `slug`: 영문 소문자+하이픈만, 30자 이내. 핵심 키워드 기반. 정규화 후 DB 중복 검사 → `-2`, `-3` 식 suffix로 유일화. 빈 값/실패 시 `article-{timestamp}` fallback.
-- `category`: `페스티벌`/`아티스트`/`릴리즈`/`뉴스`/`인터뷰` enum. enum 외 값은 default `뉴스`.
-- `genre`: 영문 소문자, EDM 장르(house, techno, trance, drum-and-bass, dubstep, ambient, experimental, hardstyle, future-bass, big-room 등) 중 하나. 미상 시 `edm`.
+특징:
 
-검증 정책:
+- 단일 이미지 소스 → 단일 기사 초안
+- 토픽 제안/클러스터 과정을 거치지 않는다
+- 크롭 이미지가 있으면 `articles.image_url`에 크롭 이미지 URL 저장
+- 크롭하지 않으면 원본 이미지 URL 저장
 
-- 생성 결과가 너무 짧으면 실패
-- 한국어 비율이 낮으면 실패
-- Login, Search, Share, Previous article 등 원문 페이지 잡음이 남아 있으면 실패
-- 실패 시 한 번 재시도
+### 공통 프롬프트 정책
 
-프롬프트 정책 (`lib/prompts.ts` SYSTEM_PROMPT_A):
+`lib/prompts.ts`의 `SYSTEM_PROMPT_A`:
 
-- 한국어 기사 작성
-- 원문 그대로 복사 금지
-- `오늘`, `어제`, `최근`, `며칠 전` 같은 상대 날짜 표현 금지
-- 날짜가 필요하면 원문의 구체 날짜를 사용
-- 발표/공개/발매 시점 언급 시에는 소스 발행일을 본문에 자연스럽게 녹임 (예: "2026년 3월 12일 신곡 'XYZ'를 공개했다")
-- 소스 발행일이 없거나 불명확하면 시점 표현 자체를 생략 (추측 날짜 금지)
+- 한국어 기사체
+- 상대 날짜 표현 금지 (`오늘`, `어제`, `최근`, `며칠 전`)
+- 날짜가 필요하면 소스의 구체 날짜만 사용
+- 불명확하면 날짜 언급 생략
+- 영어 고유명사는 영문 원문 유지가 기본
+- 한국어 정착 표기만 예외적으로 허용
+- 임의 한글 음역 금지
 
-고유명사 표기 규칙(엄격 강화됨):
+## 10. 자동 토픽 제안 정책
 
-- 기본 원칙: 영어 아티스트명/곡명/앨범명/EP명/레이블명/페스티벌명/클럽명/믹스명/행사명은 영문 원문 그대로 표기.
-- 아티스트/곡/앨범/레이블 예외: 한국에서 이미 정착된 표기에 한해 한국어 사용 가능. 예: Martin Garrix → 마틴 게릭스, Calvin Harris → 칼빈 해리스, David Guetta → 데이비드 게타, Skrillex → 스크릴렉스, deadmau5 → 데드마우스, Tomorrowland → 투모로우랜드, Ultra → 울트라, Coachella → 코첼라.
-- 도시명/국가명 예외: 본문에서 단독 지칭 시 한국어 표기. Dublin → 더블린, Amsterdam → 암스테르담, Berlin → 베를린, London → 런던, Paris → 파리, New York → 뉴욕, Ibiza → 이비자, Chicago → 시카고, Tokyo → 도쿄, Seoul → 서울. 단, 도시명이 고유명사의 일부일 때(예: 'GU49: Dublin', 'Boiler Room Berlin', 'ADE Amsterdam')는 영문 그대로 유지.
-- 절대 금지: 임의로 한글 발음을 만들어 붙이는 행위. Anyma→아니마, John Summit→존 서밋, Dom Dolla→돔 돌라, Anjunabeats→안준비츠, KSHMR→캐슈머, Fred again..→프레드 어게인, Deep Dish→디프 디시, Moderat→모더랫, GU49: Dublin→GU49: 더블린 등 새 음역 금지.
-- 곡명/앨범명/EP명/믹스명은 작은따옴표로 감싼 원문 그대로 표기. 예: 'Animals', 'A State of Trance 2026', 'GU49: Dublin'.
-- 영문/한글 병기(예: "Martin Garrix(마틴 게릭스)") 금지. 둘 중 하나만 사용.
-- 애매하면 영문 사용 (안전판).
-- `app/api/generate/route.ts`의 user prompt에도 SYSTEM_PROMPT_A를 따르라는 cross-reference를 박아 system/user 양쪽에서 동일 규칙이 전달되도록 정렬.
+목표는 "한국어 EDM 뉴스 기사로 작성할 가치가 있는 raw article 후보"를 찾는 것.
 
-## 9. Cloudflare Pages 배포
+현재 구조:
 
-### 빌드
+1. 코드 기반 후보 생성
+   - `lib/edm-entities.json` 엔터티 사전 사용
+   - 아티스트/페스티벌/레이블 매칭
+   - 단독 기사 후보도 허용
+
+2. LLM 가치 평가
+   - 후보마다 Ollama 호출
+   - 기사 가치가 있으면 topic/keywords 반환
+   - 카테고리 단어, 매체명, 연도 단독, 인터뷰 시리즈명 등은 거절
+
+현재 주의:
+
+- raw article의 사용 여부를 추적하는 `is_used`류 컬럼은 없다.
+- 같은 raw article이 반복 후보로 잡힐 수 있다.
+
+## 11. Cloudflare 배포
 
 Cloudflare Pages 설정:
 
 - Build command: `npm run build:static`
-- Build output directory: `out`
-- Environment variables:
-  - `NEXT_PUBLIC_SUPABASE_URL`
-  - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- Output directory: `out`
 
-Cloudflare에는 넣지 않아도 되는 것:
+배포 시:
 
-- `OLLAMA_BASE_URL`
-- `OLLAMA_MODEL`
-- `SUGGEST_MODEL`
-- `ADMIN_PASSWORD`
-- `CLOUDFLARE_DEPLOY_HOOK_URL`
-- `BUILD_STATIC`
+- 공개 사이트 HTML만 생성
+- `/admin` 없음
+- `/api` 없음
+- `proxy.ts` 없음
 
-### 자동 재빌드
+게시/수정/이미지 교체 시 로컬 API가 `CLOUDFLARE_DEPLOY_HOOK_URL`로 재빌드를 요청한다.
 
-다음 두 경로 모두 Cloudflare Pages 재빌드를 fire-and-forget 트리거한다:
+재빌드 트리거:
 
-1. **최초 게시:** `/api/articles/[id]/publish` (PATCH)가 Supabase에 `published=true`, `published_at=now()` 업데이트 → `CLOUDFLARE_DEPLOY_HOOK_URL`로 POST.
-2. **게시 후 수정:** `/api/articles/[id]` (PATCH)가 기존 `published=true` 기사에 적용되면, `title/content/updated_at=now()` 업데이트 후 동일 deploy hook 트리거.
+- 기사 게시: `/api/articles/[id]/publish`
+- 게시 기사 수정: `/api/articles/[id]`
+- 게시 기사 이미지 교체: `/api/articles/[id]/image`
 
-Cloudflare Pages는 매 호출마다 새 빌드를 실행한다. 짧은 시간에 여러 번 수정하면 빌드가 누적되니 주의.
+## 12. 현재 완료된 것
 
-### 어드민 배포 관련 현재 판단
+- RSS/URL 수집
+- 자동 토픽 제안
+- 클러스터 기반 기사 생성
+- 생성 기사 검토/수정/삭제/게시
+- 게시 후 수정
+- slug 기반 기사 URL
+- category/genre 기반 공개 목록
+- sitemap/robots/llms 정적 생성
+- 이미지/SNS 기반 Vision 분석
+- 이미지 소스 원본 Storage 저장
+- 이미지 크롭 기반 기사 이미지 저장
+- 생성 기사 검토 탭 이미지 교체
+- `articles.image_url` 우선 썸네일/본문 이미지 사용
 
-정적 export 사이트에 `/admin`을 포함하면 proxy 인증이 적용되지 않는다. 그래서 아무나 `/admin` HTML을 볼 수 있다.
+## 13. 남은 작업 / 주의점
 
-현재 상태: `scripts/build-static.mjs`의 stash 목록에 `app/admin`이 포함돼 있어 배포본에는 `/admin`이 존재하지 않는다.
+- Vision 프롬프트는 계속 조정 중이다. 특히 SNS UI 잡음, 연도 추측, 라인업 누락 문제가 핵심.
+- 이미지/SNS 기반 생성 결과의 품질 검증 로직은 아직 약하다.
+- 이미지 원본/크롭 이미지 Storage 정리 정책이 없다.
+- 게시 후 여러 번 수정하면 Cloudflare 빌드가 여러 번 트리거된다. debounce 없음.
+- 배포본 `/admin`은 현재 제외 상태. 공개 사이트에 admin을 포함하려면 Cloudflare Access 같은 별도 보호 필요.
+- 과거 테스트 기사/이미지/클러스터 정리 필요.
+- 일부 RSS 소스는 계속 실패할 수 있고, JS 렌더링 의존 사이트는 본문 추출 품질이 낮다.
 
-가능한 다른 선택지:
+## 14. API 시그니처
 
-- 배포본에 `/admin` UI를 포함하고 싶다면 Cloudflare Access로 `/admin*` 보호
-- 클라이언트 비밀번호 화면은 실수 방지용일 뿐 진짜 보안은 아님
-- 배포본에서 실제 어드민 기능까지 동작시키려면 SSG만으로는 부족하고, Cloudflare Functions/Workers 또는 별도 API 서버가 필요
+로컬 어드민에서만 실행된다. Cloudflare 정적 배포본에는 포함되지 않는다. 모든 응답은 JSON이며, 에러는 `{ error: string }`이다.
 
-## 10. 환경 변수
+### 인증
 
-### 로컬 `.env.local`
+#### `POST /api/admin/login`
 
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `OLLAMA_BASE_URL=http://localhost:11434` (운용 환경에 따라 변경. WSL에서 Windows Ollama 사용 시 WSL 게이트웨이 IP 필요)
-- `OLLAMA_MODEL=mistral-small3.2:24b` (생성/제안 공용 기본 모델. 미설정 시 `qwen3:14b`)
-- `ADMIN_PASSWORD`
-- `CLOUDFLARE_DEPLOY_HOOK_URL`
-- `SUGGEST_MODEL` 선택. suggest-clusters 전용 모델 오버라이드. 미설정 시 `OLLAMA_MODEL`에 폴백, 그 다음 `qwen3:14b`.
-- `CRON_SECRET` 선택
+- Body: `{ password: string }`
+- 응답: `{ ok: true }` + `Set-Cookie: admin_session=...`
+- 401: 비밀번호 불일치 (`{ error, remaining }`)
+- 429: 동일 IP에서 15분 내 5회 실패 (`{ error, retryAfter }`)
 
-### Cloudflare Pages
+### 기사
 
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+#### `GET /api/articles`
 
-## 11. 남은 주요 의사결정 / 다음 작업
+- Query
+  - `published`: `'true'` | `'false'` | 생략. `'true'`/`'false'` 이외 값은 무시.
+  - `limit`: 기본 50, 최대 100.
+- 정렬: `published=true`이면 `published_at DESC`, 그 외에는 `created_at DESC`.
+- 응답: `{ articles: Article[] }`
 
-### 배포/보안
+#### `PATCH /api/articles/[id]`
 
-- Cloudflare 배포본에서 `/admin`을 완전히 제외할지, Cloudflare Access로 보호하며 포함할지 결정
-- 현재처럼 로컬 어드민만 사용할 경우, 공개 헤더에서 어드민 링크는 숨기는 것이 맞다.
+- Body: `{ title: string, content: string, category?: string | null, genre?: string | null }`
+- 검증: `title.length >= 4`, `content.length >= 80`
+- 기사가 게시 상태(`published=true`)면 `CLOUDFLARE_DEPLOY_HOOK_URL`로 fire-and-forget 재빌드 트리거.
+- 응답: `{ article }`
 
-### URL 구조 (구현 완료)
+#### `DELETE /api/articles/[id]`
 
-- `app/articles/[slug]/page.tsx` 라우팅 적용. slug 우선 조회, UUID 패턴이면 id로 fallback.
-- 기사 생성 시 LLM이 slug 산출 → DB 중복 검사 후 unique suffix.
-- 공개 홈(`app/page.tsx`)의 기사 링크는 `slug ?? id`. 어드민의 검토 링크는 UUID 그대로 (UUID fallback으로 동작).
-- 단, 정적 export 빌드본에서는 slug가 있는 기사의 UUID URL은 prerender되지 않아 404. dev 모드에서만 fallback 동작.
+- 게시된 기사는 400 (`이 화면에서 삭제할 수 없습니다`).
+- 연결된 `image_sources` 행이 있으면 `generated_article_id=null`, `status='analyzed'`로 푼 뒤 삭제.
+- 응답: `{ deleted: true, article }`
 
-### 카테고리/네비게이션
+#### `PATCH /api/articles/[id]/publish`
 
-- 네비게이션: 홈 | 페스티벌 | 아티스트 | 릴리즈 | 뉴스 | 인터뷰 | 장르별 ▾. 현재 모두 더미 링크(`href: "#"`). 실제 카테고리 페이지/필터링은 미구현.
-- 기사 생성 시 `category` (5-way enum)와 `genre` (영문 소문자) 자동 태깅 완료.
-- 남은 작업: `/category/[slug]`, `/genre/[slug]` 같은 카테고리/장르별 페이지 라우트 + 필터링 UI.
-- `tags` 컬럼 미사용 — 향후 활용 여지.
+- Body 없음.
+- `published=true`, `published_at=now()` 설정. deploy hook 트리거.
+- 응답: `{ article }`
 
-### 기사 수정 (구현 완료)
+#### `PATCH /api/articles/[id]/image`
 
-- 게시 전 수정/삭제 구현됨.
-- 게시 후 수정도 구현됨. `updated_at` 컬럼 활용. 수정 시 자동 재빌드 트리거. DELETE는 여전히 게시본 차단.
+- Body: `{ imageBase64: string, mimeType?: 'image/jpeg' | 'image/png' }`
+- `imageBase64`는 data URL(`data:image/jpeg;base64,...`) 또는 raw base64. 최대 길이 14MB.
+- Storage `image-sources` 버킷의 `{year}/articles/{id}-{ts}.{ext}` 경로에 업로드 후 `articles.image_url` 갱신.
+- 게시된 기사면 deploy hook 트리거.
+- 응답: `{ article }`
 
-### 데이터 정리
+### 수집 / 클러스터 / 생성
 
-- 과거 `raw_articles.title`이 URL 형태로 저장된 데이터는 backfill API로 재추출 가능
-- 테스트로 생성된 기사/클러스터/제안 데이터 정리 필요
+#### `POST /api/collect`
 
-### SQL 정리
+- Body: `{ urls?: string[] }`
+  - `urls`가 있으면 URL 직접 추가 모드. 없으면 `rss_sources.is_active=true` 전체 RSS 수집.
+- 응답: `{ success, collected: number, failures: { source, url, error }[] }`
 
-- `supabase-planned-migrations.sql`은 현재 스키마 방향에 맞춰 적용 전 정리 필요
-- 최소 확인 대상:
-  - `articles.published_at`
-  - 향후 `slug/category/genre/tags`
-  - `suggested_clusters` RLS policy
+#### `POST /api/cluster`
 
-## 12. 알려진 이슈
+- Body: `{ topic: string, keywords?: string[], articleIds?: string[], matchMode?: 'or' | 'and' }`
+- `articleIds`가 있으면 그 id들을 우선 사용. 없으면 `keywords`로 `raw_articles.title/content` ILIKE 검색 (최대 20개).
+- 매칭 결과로 `article_clusters` 생성 + `cluster_articles` 연결.
+- 응답: `{ success, clusterId, matchMode, matched, articles: { title, url }[] }`
 
-- Cloudflare 정적 export에서는 proxy/API가 실행되지 않는다.
-- 정적 배포에 `/admin`이 포함되면 인증 없이 HTML이 노출된다 (현재 stash로 제외 중).
-- `npm run dev`와 `npm run build:static` 둘 다 `--webpack` 강제. Next 16.2 Turbopack은 `output:'export'`를 silently 무시해 `out/`이 생성되지 않는다.
-- `app/api/admin/login`의 rate limit은 in-memory라 dev 서버 재시작 시 초기화된다.
-- 일부 RSS 소스는 계속 실패할 수 있다. Beatportal/Resident Advisor는 수동 URL ingest가 더 현실적이다.
-- JS 렌더링 의존 사이트는 본문 추출 품질이 낮을 수 있다.
-- `OLLAMA_MODEL`로 지정된 모델이 Ollama 인스턴스에 pull돼 있지 않으면 generate/suggest-clusters 양쪽 모두 첫 호출에서 `model not found` 에러. fallback 안 함. 모델 교체 시 `ollama pull <model>` 먼저.
-- 현재 `rss_sources` 행 수 = 42. 직전 16개 신규 소스 INSERT SQL 중 일부만 적용된 상태(이전 35 + 신규 7). 나머지 9개는 url unique 충돌이거나 SQL 실행이 부분 적용으로 끝난 것으로 추정.
-- suggest-clusters에 raw article 중복 처리 방지 로직이 없다. 같은 article이 매번 후보로 다시 잡힐 수 있다.
-- 게시 후 수정 시 Cloudflare deploy hook이 매번 트리거된다. 짧은 시간에 여러 번 수정하면 빌드 큐가 누적될 수 있다. debounce 미구현.
-- 정적 export 빌드본에서 slug-있는 기사의 UUID URL은 prerender되지 않아 404. 옛 UUID 외부 링크를 유지해야 한다면 redirect 로직이 별도 필요.
-- `slug` 컬럼은 한 번 생성된 후 PATCH로 변경되지 않는다. 한국어 토픽이 바뀌어도 URL은 고정. 의도된 동작.
+#### `POST /api/generate`
+
+- Body: `{ clusterIds: string[] }`
+- 각 클러스터의 raw 기사 본문을 정제해 Ollama로 한국어 기사 생성. 검증 실패 시 1회 재시도. `articles`에 `published=false`로 저장.
+- 응답: `{ results: { success, clusterId, article?, error? }[] }`
+
+#### `GET /api/cron`, `POST /api/cron`
+
+- Header: `CRON_SECRET` 환경변수가 설정되어 있으면 `Authorization: Bearer ${CRON_SECRET}` 필요. 미설정 시 인증 없음.
+- 내부적으로 `/api/collect`를 POST 호출.
+- 응답: `{ ok, startedAt, finishedAt, collected, error }`
+
+### 자동 토픽 제안 / 차단
+
+#### `GET /api/suggest-clusters`
+
+- Query: `status?` (`pending` | `approved` | `rejected` | `published`)
+- 응답: `{ suggestions: PersistedSuggestion[] }` (각 제안에 raw 기사 메타 hydrate 포함)
+
+#### `POST /api/suggest-clusters`
+
+- Body: `{ limit?: number }` (기본 200, 최대 200)
+- 흐름: 엔터티 사전 매칭으로 후보 클러스터 생성 → 후보별 LLM 승인 → 중복/블록리스트 필터 → `suggested_clusters`에 `status='pending'`으로 저장.
+- 사전 로드 실패 시 단일 LLM 경로(`runLlmOnlyPath`)로 fallback.
+- 응답: `{ suggestions, saved, total, source: 'entity+llm' | 'llm', model, candidateCount?, candidateReviewCount?, approvedCount?, normalizedSuggestionCount, duplicateSkipCount? }`
+
+#### `PATCH /api/suggest-clusters/[id]`
+
+- Body: `{ status?: 'pending' | 'approved' | 'rejected' | 'published', clusterId?: string | null }`
+- 응답: `{ suggestion }`
+
+#### `GET /api/topic-suggestion-blocklist`
+
+- 응답: `{ rules: { id, pattern, reason, enabled, created_at }[] }`
+
+#### `POST /api/topic-suggestion-blocklist`
+
+- Body: `{ pattern: string, reason?: string }` (저장 시 `enabled=true`)
+- 응답: `{ rule }`
+
+#### `PATCH /api/topic-suggestion-blocklist`
+
+- Body: `{ id: string, enabled?: boolean, reason?: string | null }`
+- 응답: `{ rule }`
+
+#### `DELETE /api/topic-suggestion-blocklist?id=...`
+
+- 응답: `{ success: true }`
+
+### 이미지 / SNS 파이프라인
+
+#### `POST /api/image-sources/analyze`
+
+- Body: `{ imageBase64: string, fileName?: string, mimeType?: 'image/jpeg' | 'image/png', sourceMemo?: string, sourceDate?: 'YYYY-MM-DD' }`
+- 흐름: 원본 이미지를 Storage `{year}/{uuid}/original.{ext}`에 업로드 → Vision LLM(`mistral-small3.2:24b`)으로 전체 이미지 분석 → `image_sources` 행 생성 (`status='analyzed'`).
+- 응답: `{ imageSource, extractedText, imageUrl }`
+
+#### `POST /api/image-sources/[id]/generate`
+
+- Body: `{ imageBase64?: string, mimeType?: 'image/jpeg' | 'image/png' }`
+- `imageBase64`가 있으면 크롭 이미지를 Storage `{year}/{sourceId}/article-{ts}.{ext}`에 업로드해 `articles.image_url`로 사용. 없으면 `image_sources.image_url` 그대로 사용.
+- `image_sources.extracted_text` 기반으로 Ollama 한국어 기사 생성. `articles`에 `published=false`로 저장 + `image_sources.generated_article_id` 설정, `status='draft_created'`.
+- 이미 `generated_article_id`가 살아 있으면 400. 사라진 참조면 자동으로 풀고 진행.
+- 응답: `{ article }`
+
+#### `PATCH /api/image-sources/[id]`
+
+- Body: `{ status: 'analyzed' | 'draft_created' | 'rejected' }`
+- 응답: `{ imageSource }`
+
+### 운영 유틸
+
+#### `POST /api/raw-articles/backfill-titles`
+
+- Body: `{ dryRun?: boolean, limit?: number }` (기본 `dryRun=true`, `limit=30`, 최대 100)
+- URL 형태로 저장된 `raw_articles.title`을 다시 가져온 HTML에서 재추출. `dryRun=true`면 변경 없이 미리보기.
+- 응답: `{ dryRun, checked, updatable, results: { id, url, oldTitle, newTitle, updated, wouldUpdate?, error? }[] }`
+
+### 공통 사항
+
+- `cluster_id` 등 동적 segment의 `params`는 Next.js 16 규약대로 Promise.
+- Deploy hook을 트리거하는 엔드포인트: `PATCH /api/articles/[id]`(게시 기사일 때), `PATCH /api/articles/[id]/publish`, `PATCH /api/articles/[id]/image`(게시 기사일 때). 모두 fire-and-forget. 디바운스 없음.

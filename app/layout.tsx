@@ -94,6 +94,27 @@ export default function RootLayout({
           </div>
         </header>
         <main className="flex-1">{children}</main>
+        <footer className="border-t border-zinc-200 bg-white mt-12">
+          <div className="max-w-6xl mx-auto px-6 py-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between text-sm text-zinc-500">
+            <div className="flex items-center gap-5">
+              <Link
+                href="/about"
+                className="hover:text-zinc-900 transition-colors"
+              >
+                소개
+              </Link>
+              <a
+                href="mailto:gwakjoonsung@gmail.com"
+                className="hover:text-zinc-900 transition-colors"
+              >
+                문의
+              </a>
+            </div>
+            <div className="text-xs text-zinc-400">
+              © 2026 EDM Star News · 발행인 곽준성
+            </div>
+          </div>
+        </footer>
       </body>
     </html>
   );

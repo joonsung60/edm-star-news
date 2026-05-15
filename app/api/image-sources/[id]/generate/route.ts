@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { SYSTEM_PROMPT_A } from '@/lib/prompts'
+import { findGenre } from '@/lib/taxonomy'
 
 type ImageSourceRow = {
   id: string
@@ -19,7 +20,7 @@ type GeneratedImageArticle = {
   genre: string
 }
 
-const ALLOWED_CATEGORIES = ['페스티벌', '아티스트', '릴리즈', '뉴스', '인터뷰']
+const ALLOWED_CATEGORIES = ['페스티벌', '릴리즈', '뉴스']
 const DEFAULT_CATEGORY = '뉴스'
 const DEFAULT_GENRE = 'edm'
 const SLUG_MAX_LENGTH = 30
@@ -119,8 +120,12 @@ function normalizeCategory(raw: string): string {
 }
 
 function normalizeGenre(raw: string): string {
-  const trimmed = raw.trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
-  return trimmed || DEFAULT_GENRE
+  return findGenre(raw)?.slug ?? DEFAULT_GENRE
+}
+
+function normalizeGenreForCategory(category: string, raw: string): string {
+  if (category !== '릴리즈') return DEFAULT_GENRE
+  return normalizeGenre(raw)
 }
 
 async function ensureUniqueSlug(base: string): Promise<string> {
@@ -221,8 +226,8 @@ function buildPrompt(source: ImageSourceRow): string {
 - 마크다운 코드블록, 설명 문장, 주석, 목록, 머리말을 JSON 앞뒤에 붙이지 마세요.
 - JSON 키는 "title", "content", "slug", "category", "genre" 다섯 개입니다.
 - JSON 문자열 안의 줄바꿈은 \\n으로 이스케이프하세요.
-- category는 "페스티벌", "아티스트", "릴리즈", "뉴스", "인터뷰" 중 하나입니다.
-- genre는 house, techno, trance, drum-and-bass, dubstep, ambient, experimental, hardstyle, future-bass, big-room 등 영문 소문자로 작성하세요. 특정하기 어렵다면 "edm"입니다.
+- category는 "페스티벌", "릴리즈", "뉴스" 셋 중 하나만 사용하세요. 페스티벌/행사/공연/레지던시는 "페스티벌", 신곡/앨범/EP/믹스/리믹스/컴필레이션 발매는 "릴리즈", 그 외는 모두 "뉴스"입니다.
+- genre는 category가 "릴리즈"일 때만 "house", "techno", "trance", "drum-and-bass", "dubstep", "ambient" 중 하나를 사용하세요. 이 목록 중 특정하기 어렵거나 category가 "페스티벌" 또는 "뉴스"이면 반드시 "edm"으로 두세요.
 
 [소스 메모]
 ${source.source_memo ?? '없음'}
@@ -353,7 +358,7 @@ export async function POST(
     const generated = await generateArticle(imageSource)
     const slug = await ensureUniqueSlug(normalizeSlug(generated.slug))
     const category = normalizeCategory(generated.category)
-    const genre = normalizeGenre(generated.genre)
+    const genre = normalizeGenreForCategory(category, generated.genre)
 
     const { data: article, error: articleError } = await supabase
       .from('articles')

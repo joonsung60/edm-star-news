@@ -157,9 +157,14 @@ export default async function ArticlePage({
 
           <CategoryBadges category={article.category} genre={article.genre} />
 
-          <h1 className="text-3xl font-bold leading-tight tracking-tight mb-8">
+          <h1 className="text-3xl font-bold leading-tight tracking-tight mb-4">
             {article.title}
           </h1>
+
+          <div className="mb-8 pb-4 border-b border-zinc-200 text-sm">
+            <span className="text-zinc-500">기사 · 편집</span>
+            <span className="ml-2 text-zinc-800 font-medium">곽준성</span>
+          </div>
 
           <div className="text-base leading-relaxed text-zinc-800 space-y-4">
             {articleBlocks.map((block, idx) => {
