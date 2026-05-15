@@ -1,12 +1,12 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { notFound, permanentRedirect } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { loadClusterImageUrl } from '@/lib/articles'
+import { isUsableImageUrl, loadClusterImageUrl } from '@/lib/articles'
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const ARTICLE_SELECT =
-  'id, title, content, published, published_at, created_at, updated_at, cluster_id, slug, category, genre'
+  'id, title, content, published, published_at, created_at, updated_at, cluster_id, image_url, slug, category, genre'
 
 export async function generateStaticParams() {
   const { data } = await supabase
@@ -34,8 +34,10 @@ export async function generateMetadata({
   }
 
   const description = createMetaDescription(data.content)
-  const imageUrl = await loadClusterImageUrl(data.cluster_id)
-    ?? extractFirstMarkdownImage(data.content)
+  const imageUrl = isUsableImageUrl(data.image_url)
+    ? data.image_url
+    : (await loadClusterImageUrl(data.cluster_id))
+      ?? extractFirstMarkdownImage(data.content)
 
   return {
     title: `${data.title} | EDM Star News`,
@@ -60,6 +62,7 @@ type ArticleDetail = {
   created_at: string
   updated_at: string | null
   cluster_id: string | null
+  image_url: string | null
   slug: string | null
   category: string | null
   genre: string | null
@@ -113,9 +116,15 @@ export default async function ArticlePage({
 
   if (!data) notFound()
 
+  if (data.slug && slug !== data.slug) {
+    permanentRedirect(`/articles/${data.slug}/`)
+  }
+
   const article = data
-  const articleImageUrl = await loadClusterImageUrl(article.cluster_id)
-    ?? extractFirstMarkdownImage(article.content)
+  const articleImageUrl = isUsableImageUrl(article.image_url)
+    ? article.image_url
+    : (await loadClusterImageUrl(article.cluster_id))
+      ?? extractFirstMarkdownImage(article.content)
   const articleBlocks = splitArticleBlocks(article.content, articleImageUrl)
   const showUpdated =
     article.published_at &&

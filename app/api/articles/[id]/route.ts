@@ -53,7 +53,7 @@ export async function PATCH(
     .from('articles')
     .update({ title, content, category, genre, updated_at: new Date().toISOString() })
     .eq('id', id)
-    .select('id, title, content, published, published_at, created_at, updated_at, cluster_id, slug, category, genre')
+    .select('id, title, content, published, published_at, created_at, updated_at, cluster_id, image_url, slug, category, genre')
     .maybeSingle()
 
   if (error) {
@@ -107,6 +107,18 @@ export async function DELETE(
       { error: '게시된 기사는 이 화면에서 삭제할 수 없습니다.' },
       { status: 400 }
     )
+  }
+
+  const { error: imageSourceUpdateError } = await supabase
+    .from('image_sources')
+    .update({
+      generated_article_id: null,
+      status: 'analyzed',
+    })
+    .eq('generated_article_id', id)
+
+  if (imageSourceUpdateError) {
+    return NextResponse.json({ error: imageSourceUpdateError.message }, { status: 500 })
   }
 
   const { error: deleteError } = await supabase

@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
 
   let query = supabase
     .from('articles')
-    .select('id, title, content, published, published_at, created_at, updated_at, cluster_id, slug, category, genre')
+    .select('id, title, content, published, published_at, created_at, updated_at, cluster_id, image_url, slug, category, genre')
     .limit(limit)
 
   if (published === 'true' || published === 'false') {

@@ -41,10 +41,6 @@ function formatDate(value) {
   return Number.isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString()
 }
 
-function articlePath(article) {
-  return `/articles/${article.slug || article.id}/`
-}
-
 loadEnvLocal()
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -69,6 +65,8 @@ if (error) {
 
 mkdirSync('public', { recursive: true })
 
+const articlesWithSlug = (articles ?? []).filter((article) => article.slug)
+
 const urls = [
   {
     loc: `${SITE_URL}/`,
@@ -88,8 +86,8 @@ const urls = [
     changefreq: 'daily',
     priority: '0.6',
   })),
-  ...(articles ?? []).map((article) => ({
-    loc: `${SITE_URL}${articlePath(article)}`,
+  ...articlesWithSlug.map((article) => ({
+    loc: `${SITE_URL}/articles/${article.slug}/`,
     lastmod: formatDate(article.updated_at || article.published_at || article.created_at),
     changefreq: 'daily',
     priority: '0.8',
@@ -132,8 +130,13 @@ Sitemap: ${SITE_URL}/sitemap.xml
 - Published article pages are static Cloudflare Pages output.
 `
 
+const redirects = articlesWithSlug
+  .map((article) => `/articles/${article.id}/ /articles/${article.slug}/ 301`)
+  .join('\n') + '\n'
+
 writeFileSync('public/sitemap.xml', sitemap)
 writeFileSync('public/robots.txt', robots)
 writeFileSync('public/llms.txt', llms)
+writeFileSync('public/_redirects', redirects)
 
-console.log(`Generated sitemap.xml, robots.txt, llms.txt for ${(articles ?? []).length} published articles`)
+console.log(`Generated sitemap.xml, robots.txt, llms.txt, _redirects for ${(articles ?? []).length} published articles (${articlesWithSlug.length} with slug)`)

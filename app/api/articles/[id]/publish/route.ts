@@ -19,7 +19,7 @@ export async function PATCH(
       published_at: publishedAt,
     })
     .eq('id', id)
-    .select('id, title, content, published, published_at, created_at, cluster_id')
+    .select('id, title, content, published, published_at, created_at, cluster_id, image_url, slug, category, genre')
     .maybeSingle()
 
   if (error) {

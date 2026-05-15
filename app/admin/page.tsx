@@ -2,50 +2,130 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
+import type { PercentCrop } from 'react-image-crop'
+import { ImageCropper, getCroppedDataUrl } from '@/components/ImageCropper'
 import { supabase } from '@/lib/supabase'
 
-type Tab = 'collect' | 'add-urls' | 'suggest' | 'articles' | 'cluster' | 'generate'
+type AdminGroup = 'rss' | 'image'
+type RssTab = 'collect' | 'add-urls' | 'suggest' | 'articles' | 'cluster' | 'generate'
+type ImageTab = 'image-source' | 'image-articles'
+
+const RSS_TABS: { id: RssTab; label: string }[] = [
+  { id: 'collect', label: '① RSS 수집' },
+  { id: 'add-urls', label: '② URL 직접 추가' },
+  { id: 'suggest', label: '③ 자동 토픽 제안' },
+  { id: 'articles', label: '④ 생성 기사 검토' },
+  { id: 'cluster', label: '⑤ 클러스터 (수동)' },
+  { id: 'generate', label: '⑥ 기사 생성 (수동)' },
+]
+
+const IMAGE_TABS: { id: ImageTab; label: string }[] = [
+  { id: 'image-source', label: '이미지 소스 추가' },
+  { id: 'image-articles', label: '생성 기사 검토' },
+]
 
 export default function AdminPage() {
-  const [activeTab, setActiveTab] = useState<Tab>('collect')
+  const [activeGroup, setActiveGroup] = useState<AdminGroup>('rss')
+  const [activeRssTab, setActiveRssTab] = useState<RssTab>('collect')
+  const [activeImageTab, setActiveImageTab] = useState<ImageTab>('image-source')
 
   return (
     <div className="max-w-4xl mx-auto p-8">
       <h1 className="text-2xl font-bold mb-8">EDM Star News 어드민</h1>
 
-      {/* 탭 */}
-      <div className="flex gap-2 mb-8 border-b">
-        {[
-          { id: 'collect', label: '① RSS 수집' },
-          { id: 'add-urls', label: '② URL 직접 추가' },
-          { id: 'suggest', label: '③ 자동 토픽 제안' },
-          { id: 'articles', label: '④ 생성 기사 검토' },
-          { id: 'cluster', label: '⑤ 클러스터 (수동)' },
-          { id: 'generate', label: '⑥ 기사 생성 (수동)' },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as Tab)}
-            className={`px-4 py-2 font-medium border-b-2 transition-colors ${
-              activeTab === tab.id
-                ? 'border-black text-black'
-                : 'border-transparent text-gray-400 hover:text-gray-600'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+      <div className="mb-8 rounded border border-gray-200 bg-gray-50 p-1">
+        <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
+          {[
+            { id: 'rss', label: 'RSS 및 URL 기반 기사 생성' },
+            { id: 'image', label: '이미지 소스 및 SNS 기반 기사 생성' },
+          ].map((group) => (
+            <button
+              key={group.id}
+              type="button"
+              onClick={() => setActiveGroup(group.id as AdminGroup)}
+              className={`rounded px-4 py-3 text-sm font-semibold transition-colors ${
+                activeGroup === group.id
+                  ? 'bg-white text-black shadow-sm'
+                  : 'text-gray-500 hover:text-gray-800'
+              }`}
+            >
+              {group.label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* 탭 컨텐츠 */}
-      {activeTab === 'collect' && <CollectTab />}
-      {activeTab === 'add-urls' && <AddUrlsTab />}
-      {activeTab === 'suggest' && <SuggestTab />}
-      {activeTab === 'articles' && <ArticlesReviewTab />}
-      {activeTab === 'cluster' && <ClusterTab />}
-      {activeTab === 'generate' && <GenerateTab />}
+      {activeGroup === 'rss' && (
+        <TabBar
+          tabs={RSS_TABS}
+          activeId={activeRssTab}
+          onChange={(id) => setActiveRssTab(id as RssTab)}
+        />
+      )}
+
+      {activeGroup === 'image' && (
+        <TabBar
+          tabs={IMAGE_TABS}
+          activeId={activeImageTab}
+          onChange={(id) => setActiveImageTab(id as ImageTab)}
+        />
+      )}
+
+      {activeGroup === 'rss' && activeRssTab === 'collect' && <CollectTab />}
+      {activeGroup === 'rss' && activeRssTab === 'add-urls' && <AddUrlsTab />}
+      {activeGroup === 'rss' && activeRssTab === 'suggest' && <SuggestTab />}
+      {activeGroup === 'rss' && activeRssTab === 'articles' && <ArticlesReviewTab />}
+      {activeGroup === 'rss' && activeRssTab === 'cluster' && <ClusterTab />}
+      {activeGroup === 'rss' && activeRssTab === 'generate' && <GenerateTab />}
+
+      {activeGroup === 'image' && activeImageTab === 'image-source' && <ImageSourceTab />}
+      {activeGroup === 'image' && activeImageTab === 'image-articles' && <ArticlesReviewTab />}
     </div>
   )
+}
+
+function TabBar<T extends string>({
+  tabs,
+  activeId,
+  onChange,
+}: {
+  tabs: { id: T; label: string }[]
+  activeId: T
+  onChange: (id: T) => void
+}) {
+  return (
+    <div className="flex flex-wrap gap-2 mb-8 border-b">
+      {tabs.map((tab) => (
+        <button
+          key={tab.id}
+          type="button"
+          onClick={() => onChange(tab.id)}
+          className={`px-4 py-2 font-medium border-b-2 transition-colors ${
+            activeId === tab.id
+              ? 'border-black text-black'
+              : 'border-transparent text-gray-400 hover:text-gray-600'
+          }`}
+        >
+          {tab.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        resolve(reader.result)
+      } else {
+        reject(new Error('이미지를 읽지 못했습니다.'))
+      }
+    }
+    reader.onerror = () => reject(new Error('이미지를 읽지 못했습니다.'))
+    reader.readAsDataURL(file)
+  })
 }
 
 function CollectTab() {
@@ -169,6 +249,291 @@ function AddUrlsTab() {
   )
 }
 
+function ImageSourceTab() {
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [sourceImageDataUrl, setSourceImageDataUrl] = useState('')
+  const [useCrop, setUseCrop] = useState(false)
+  const [crop, setCrop] = useState<PercentCrop | null>(null)
+  const [sourceMemo, setSourceMemo] = useState('')
+  const [sourceDate, setSourceDate] = useState('')
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [imageSourceId, setImageSourceId] = useState<string | null>(null)
+  const [imageUrl, setImageUrl] = useState('')
+  const [extractedText, setExtractedText] = useState('')
+  const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
+
+  const resetResult = () => {
+    setImageSourceId(null)
+    setImageUrl('')
+    setExtractedText('')
+    setUseCrop(false)
+    setCrop(null)
+    setMessage('')
+    setError('')
+  }
+
+  const handleAnalyze = async () => {
+    if (!imageFile) {
+      setError('분석할 이미지를 선택하세요.')
+      return
+    }
+
+    setIsAnalyzing(true)
+    resetResult()
+
+    try {
+      const imageBase64 = await fileToDataUrl(imageFile)
+      setSourceImageDataUrl(imageBase64)
+      const res = await fetch('/api/image-sources/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imageBase64,
+          fileName: imageFile.name,
+          mimeType: imageFile.type,
+          sourceMemo,
+          sourceDate,
+        }),
+      })
+      const data = await res.json()
+
+      if (data.error) {
+        setError(data.error)
+      } else {
+        setImageSourceId(data.imageSource?.id ?? null)
+        setImageUrl(data.imageUrl ?? data.imageSource?.image_url ?? '')
+        setExtractedText(data.extractedText ?? data.imageSource?.extracted_text ?? '')
+        setMessage('이미지 분석이 완료됐습니다. 내용을 확인한 뒤 기사 초안을 생성하세요.')
+      }
+    } catch (err) {
+      setError(String(err))
+    }
+
+    setIsAnalyzing(false)
+  }
+
+  const handleGenerateDraft = async () => {
+    if (!imageSourceId) {
+      setError('먼저 이미지를 분석하세요.')
+      return
+    }
+
+    setIsGenerating(true)
+    setError('')
+    setMessage('')
+
+    try {
+      const croppedImageBase64 = useCrop && sourceImageDataUrl && crop
+        ? await getCroppedDataUrl(sourceImageDataUrl, crop)
+        : undefined
+      const res = await fetch(`/api/image-sources/${imageSourceId}/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imageBase64: croppedImageBase64,
+          mimeType: 'image/jpeg',
+        }),
+      })
+      const data = await res.json()
+
+      if (data.error) {
+        setError(data.error)
+      } else {
+        setMessage(`기사 초안 생성 완료: ${data.article?.title ?? ''}`)
+        setImageSourceId(null)
+      }
+    } catch (err) {
+      setError(String(err))
+    }
+
+    setIsGenerating(false)
+  }
+
+  const handleRejectImageSource = async () => {
+    if (!imageSourceId) return
+
+    setIsGenerating(true)
+    setError('')
+    setMessage('')
+
+    try {
+      const res = await fetch(`/api/image-sources/${imageSourceId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'rejected' }),
+      })
+      const data = await res.json()
+
+      if (data.error) {
+        setError(data.error)
+      } else {
+        setMessage('이미지 소스를 기각했습니다.')
+        setImageSourceId(null)
+      }
+    } catch (err) {
+      setError(String(err))
+    }
+
+    setIsGenerating(false)
+  }
+
+  return (
+    <div>
+      <p className="text-gray-600 mb-6">
+        SNS 캡처나 포스터 이미지를 Vision LLM으로 분석하고, 단일 이미지 소스 기반 기사 초안을 생성합니다.
+      </p>
+
+      <div className="space-y-5 rounded border p-5">
+        <div>
+          <label className="mb-2 block text-sm font-semibold text-gray-800">
+            이미지 파일
+          </label>
+          <input
+            type="file"
+            accept="image/jpeg,image/png"
+            onChange={(e) => {
+              setImageFile(e.target.files?.[0] ?? null)
+              setSourceImageDataUrl('')
+              resetResult()
+            }}
+            className="block w-full rounded border p-3 text-sm file:mr-4 file:rounded file:border-0 file:bg-black file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white"
+          />
+          {imageFile && (
+            <p className="mt-2 text-sm text-gray-500">
+              선택됨: {imageFile.name}
+            </p>
+          )}
+        </div>
+
+        <div>
+          <label className="mb-2 block text-sm font-semibold text-gray-800">
+            소스 메모
+            <span className="ml-1 font-normal text-gray-400">(선택)</span>
+          </label>
+          <textarea
+            value={sourceMemo}
+            onChange={(e) => setSourceMemo(e.target.value)}
+            className="h-32 w-full rounded border p-3 text-sm"
+            placeholder="예: Instagram 캡처, 아티스트 공식 계정 게시물, 현장 포스터 등"
+          />
+        </div>
+
+        <div>
+          <label className="mb-2 block text-sm font-semibold text-gray-800">
+            날짜
+            <span className="ml-1 font-normal text-gray-400">(선택)</span>
+          </label>
+          <input
+            type="date"
+            value={sourceDate}
+            onChange={(e) => setSourceDate(e.target.value)}
+            className="w-full rounded border p-3 text-sm sm:w-64"
+          />
+        </div>
+
+        <div className="rounded bg-gray-50 p-4 text-sm text-gray-500">
+          이미지는 Supabase Storage에 저장되고, 분석 결과를 확인한 뒤 기사 초안을 생성할 수 있습니다.
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={handleAnalyze}
+            disabled={isAnalyzing || isGenerating || !imageFile}
+            className="px-6 py-3 bg-black text-white rounded font-semibold disabled:opacity-50"
+          >
+            {isAnalyzing ? '분석 중...' : '분석'}
+          </button>
+          {imageSourceId && (
+            <>
+              <button
+                type="button"
+                onClick={handleGenerateDraft}
+                disabled={isGenerating || isAnalyzing}
+                className="px-6 py-3 border border-gray-300 text-gray-700 rounded font-semibold hover:bg-gray-50 disabled:opacity-50"
+              >
+                {isGenerating ? '처리 중...' : '기사 초안 생성'}
+              </button>
+              <button
+                type="button"
+                onClick={handleRejectImageSource}
+                disabled={isGenerating || isAnalyzing}
+                className="px-6 py-3 border border-red-300 text-red-600 rounded font-semibold hover:bg-red-50 disabled:opacity-50"
+              >
+                기각
+              </button>
+            </>
+          )}
+        </div>
+
+        {message && <p className="text-green-600">{message}</p>}
+        {error && <p className="text-red-500">{error}</p>}
+
+        {extractedText && sourceImageDataUrl && (
+          <div className="border-t pt-5">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-gray-800">이미지 크롭</p>
+                <p className="mt-1 text-sm text-gray-500">
+                  선택사항입니다. 끄면 원본 이미지 전체가 기사 이미지로 들어갑니다.
+                </p>
+              </div>
+              <label className="flex items-center gap-2 text-sm text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={useCrop}
+                  onChange={(e) => {
+                    setUseCrop(e.target.checked)
+                    if (!e.target.checked) setCrop(null)
+                  }}
+                />
+                크롭 사용
+              </label>
+            </div>
+            {useCrop ? (
+              <ImageCropper
+                imageUrl={sourceImageDataUrl}
+                onCropChange={setCrop}
+              />
+            ) : (
+              <div className="max-h-[420px] overflow-hidden rounded border bg-gray-100">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={sourceImageDataUrl} alt="" className="block max-h-[420px] w-full object-contain" />
+              </div>
+            )}
+          </div>
+        )}
+
+        {(imageUrl || extractedText) && (
+          <div className="grid grid-cols-1 gap-5 border-t pt-5 md:grid-cols-[220px_1fr]">
+            {imageUrl && (
+              <div>
+                <p className="mb-2 text-sm font-semibold text-gray-800">원본 저장 이미지</p>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={imageUrl}
+                  alt=""
+                  className="w-full rounded border bg-gray-100 object-cover"
+                />
+              </div>
+            )}
+            {extractedText && (
+              <div>
+                <p className="mb-2 text-sm font-semibold text-gray-800">분석 결과 미리보기</p>
+                <pre className="max-h-96 overflow-auto whitespace-pre-wrap rounded border bg-gray-50 p-4 text-sm leading-6 text-gray-700">
+                  {extractedText}
+                </pre>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function ClusterTab() {
   const [topic, setTopic] = useState('')
   const [keywords, setKeywords] = useState('')
@@ -264,6 +629,7 @@ type AdminArticle = {
   created_at: string
   updated_at: string | null
   cluster_id: string | null
+  image_url: string | null
   category: string | null
   genre: string | null
 }
@@ -785,6 +1151,10 @@ function ArticlesReviewTab() {
   const [editContent, setEditContent] = useState('')
   const [editCategory, setEditCategory] = useState('')
   const [editGenre, setEditGenre] = useState('')
+  const [replacingId, setReplacingId] = useState<string | null>(null)
+  const [replacementImageDataUrl, setReplacementImageDataUrl] = useState('')
+  const [replacementUseCrop, setReplacementUseCrop] = useState(false)
+  const [replacementCrop, setReplacementCrop] = useState<PercentCrop | null>(null)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
 
@@ -858,6 +1228,22 @@ function ArticlesReviewTab() {
     setEditGenre('')
   }
 
+  const startReplaceImage = (article: AdminArticle) => {
+    setReplacingId(article.id)
+    setReplacementImageDataUrl('')
+    setReplacementUseCrop(false)
+    setReplacementCrop(null)
+    setError('')
+    setMessage('')
+  }
+
+  const cancelReplaceImage = () => {
+    setReplacingId(null)
+    setReplacementImageDataUrl('')
+    setReplacementUseCrop(false)
+    setReplacementCrop(null)
+  }
+
   const insertImageMarkdown = () => {
     const url = window.prompt('삽입할 이미지 URL을 입력하세요.')
     if (!url?.trim()) return
@@ -926,6 +1312,44 @@ function ArticlesReviewTab() {
     setProcessing(null)
   }
 
+  const handleSaveReplacementImage = async (article: AdminArticle) => {
+    if (!replacementImageDataUrl) {
+      setError('교체할 이미지를 선택하세요.')
+      return
+    }
+
+    setProcessing(article.id)
+    setError('')
+    setMessage('')
+
+    try {
+      const imageBase64 = replacementUseCrop && replacementCrop
+        ? await getCroppedDataUrl(replacementImageDataUrl, replacementCrop)
+        : replacementImageDataUrl
+      const res = await fetch(`/api/articles/${article.id}/image`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imageBase64,
+          mimeType: replacementUseCrop && replacementCrop ? 'image/jpeg' : undefined,
+        }),
+      })
+      const data = await res.json()
+
+      if (data.error) {
+        setError(data.error)
+      } else {
+        setMessage(`이미지 교체 완료: ${data.article?.title ?? article.title}`)
+        cancelReplaceImage()
+        await load(subTab)
+      }
+    } catch (err) {
+      setError(String(err))
+    }
+
+    setProcessing(null)
+  }
+
   const emptyMessage =
     subTab === 'draft'
       ? '게시 대기 중인 기사 초안이 없습니다.'
@@ -968,6 +1392,7 @@ function ArticlesReviewTab() {
         <div className="space-y-4">
           {articles.map((article) => {
             const isEditing = editingId === article.id
+            const isReplacing = replacingId === article.id
             return (
               <article key={article.id} className="border rounded p-4">
                 <div className="flex items-start justify-between gap-4">
@@ -978,7 +1403,81 @@ function ArticlesReviewTab() {
                       {article.cluster_id && <span>cluster {article.cluster_id}</span>}
                     </div>
 
-                    {isEditing ? (
+                    {isReplacing ? (
+                      <div className="space-y-4">
+                        <div>
+                          <p className="mb-2 text-sm font-semibold text-gray-800">새 이미지 업로드</p>
+                          <input
+                            type="file"
+                            accept="image/jpeg,image/png"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0]
+                              if (!file) {
+                                setReplacementImageDataUrl('')
+                                setReplacementUseCrop(false)
+                                setReplacementCrop(null)
+                                return
+                              }
+                              try {
+                                setReplacementImageDataUrl(await fileToDataUrl(file))
+                                setReplacementUseCrop(false)
+                                setReplacementCrop(null)
+                              } catch (err) {
+                                setError(String(err))
+                              }
+                            }}
+                            className="block w-full rounded border p-3 text-sm file:mr-4 file:rounded file:border-0 file:bg-black file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white"
+                          />
+                        </div>
+                        {replacementImageDataUrl ? (
+                          <div className="space-y-3">
+                            <div className="flex flex-wrap items-center justify-between gap-3">
+                              <p className="text-sm text-gray-500">
+                                크롭을 사용하지 않으면 업로드한 원본 이미지가 그대로 저장됩니다.
+                              </p>
+                              <label className="flex items-center gap-2 text-sm text-gray-700">
+                                <input
+                                  type="checkbox"
+                                  checked={replacementUseCrop}
+                                  onChange={(e) => {
+                                    setReplacementUseCrop(e.target.checked)
+                                    if (!e.target.checked) setReplacementCrop(null)
+                                  }}
+                                />
+                                크롭 사용
+                              </label>
+                            </div>
+                            {replacementUseCrop ? (
+                              <ImageCropper
+                                imageUrl={replacementImageDataUrl}
+                                onCropChange={setReplacementCrop}
+                              />
+                            ) : (
+                              <div className="max-h-[420px] overflow-hidden rounded border bg-gray-100">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src={replacementImageDataUrl}
+                                  alt=""
+                                  className="block max-h-[420px] w-full object-contain"
+                                />
+                              </div>
+                            )}
+                          </div>
+                        ) : article.image_url ? (
+                          <div className="max-w-xs">
+                            <p className="mb-2 text-sm font-semibold text-gray-800">현재 이미지</p>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={article.image_url}
+                              alt=""
+                              className="w-full rounded border bg-gray-100 object-cover"
+                            />
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-500">현재 등록된 이미지가 없습니다.</p>
+                        )}
+                      </div>
+                    ) : isEditing ? (
                       <div className="space-y-3">
                         <input
                           className="w-full rounded border p-3 text-lg font-semibold"
@@ -1038,7 +1537,24 @@ function ArticlesReviewTab() {
                   </div>
 
                   <div className="flex shrink-0 gap-2">
-                    {isEditing ? (
+                    {isReplacing ? (
+                      <>
+                        <button
+                          onClick={() => handleSaveReplacementImage(article)}
+                          disabled={processing !== null || !replacementImageDataUrl}
+                          className="px-3 py-2 bg-black text-white text-sm rounded font-semibold disabled:opacity-50 whitespace-nowrap"
+                        >
+                          {processing === article.id ? '저장 중...' : '이미지 저장'}
+                        </button>
+                        <button
+                          onClick={cancelReplaceImage}
+                          disabled={processing !== null}
+                          className="px-3 py-2 border border-gray-300 text-gray-600 text-sm rounded font-semibold hover:bg-gray-50 disabled:opacity-50 whitespace-nowrap"
+                        >
+                          취소
+                        </button>
+                      </>
+                    ) : isEditing ? (
                       <>
                         <button
                           onClick={() => handleSaveEdit(article)}
@@ -1066,23 +1582,30 @@ function ArticlesReviewTab() {
                         </Link>
                         <button
                           onClick={() => startEdit(article)}
-                          disabled={processing !== null || editingId !== null}
+                          disabled={processing !== null || editingId !== null || replacingId !== null}
                           className="px-3 py-2 border border-gray-300 text-gray-600 text-sm rounded font-semibold hover:bg-gray-50 disabled:opacity-50 whitespace-nowrap"
                         >
                           수정
+                        </button>
+                        <button
+                          onClick={() => startReplaceImage(article)}
+                          disabled={processing !== null || editingId !== null || replacingId !== null}
+                          className="px-3 py-2 border border-gray-300 text-gray-600 text-sm rounded font-semibold hover:bg-gray-50 disabled:opacity-50 whitespace-nowrap"
+                        >
+                          이미지 교체
                         </button>
                         {subTab === 'draft' && (
                           <>
                             <button
                               onClick={() => handlePublish(article)}
-                              disabled={processing !== null || editingId !== null}
+                              disabled={processing !== null || editingId !== null || replacingId !== null}
                               className="px-3 py-2 bg-black text-white text-sm rounded font-semibold disabled:opacity-50 whitespace-nowrap"
                             >
                               {processing === article.id ? '게시 중...' : '게시'}
                             </button>
                             <button
                               onClick={() => handleDelete(article)}
-                              disabled={processing !== null || editingId !== null}
+                              disabled={processing !== null || editingId !== null || replacingId !== null}
                               className="px-3 py-2 border border-red-300 text-red-600 text-sm rounded font-semibold hover:bg-red-50 disabled:opacity-50 whitespace-nowrap"
                             >
                               {processing === article.id ? '처리 중...' : '삭제'}

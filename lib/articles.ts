@@ -12,6 +12,7 @@ export type ArticleListItem = {
   content: string
   published_at: string | null
   cluster_id: string | null
+  article_image_url: string | null
   imageUrl: string | null
   category: string | null
   genre: string | null
@@ -24,6 +25,7 @@ type ArticleRow = {
   content: string
   published_at: string | null
   cluster_id: string | null
+  image_url: string | null
   category: string | null
   genre: string | null
 }
@@ -50,7 +52,7 @@ export async function loadPublishedArticles(
   const limit = options.limit ?? 50
   const { data, error } = await supabase
     .from('articles')
-    .select('id, slug, title, content, published_at, cluster_id, category, genre')
+    .select('id, slug, title, content, published_at, cluster_id, image_url, category, genre')
     .eq('published', true)
     .order('published_at', { ascending: false })
     .limit(200)
@@ -73,7 +75,12 @@ export async function loadPublishedArticles(
     content: row.content,
     published_at: row.published_at,
     cluster_id: row.cluster_id,
-    imageUrl: row.cluster_id ? imageByCluster.get(row.cluster_id) ?? null : null,
+    article_image_url: isUsableImageUrl(row.image_url) ? row.image_url : null,
+    imageUrl: isUsableImageUrl(row.image_url)
+      ? row.image_url
+      : row.cluster_id
+        ? imageByCluster.get(row.cluster_id) ?? null
+        : null,
     category: row.category,
     genre: row.genre,
   }))
@@ -172,7 +179,7 @@ function firstUsableImageUrl(rows: { image_url: string | null }[]): string | nul
   return rows.find((row) => isUsableImageUrl(row.image_url))?.image_url ?? null
 }
 
-function isUsableImageUrl(url: string | null): url is string {
+export function isUsableImageUrl(url: string | null): url is string {
   if (!url) return false
   if (!/^https?:\/\//i.test(url)) return false
 

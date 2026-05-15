@@ -46,8 +46,8 @@ type SuggestionStatus = 'pending' | 'approved' | 'rejected' | 'published'
 
 const ALLOWED_STATUSES: SuggestionStatus[] = ['pending', 'approved', 'rejected', 'published']
 const MIN_COHESION_SCORE = 20
-const DEFAULT_ANALYSIS_LIMIT = 500
-const MAX_ANALYSIS_LIMIT = 500
+const DEFAULT_ANALYSIS_LIMIT = 200
+const MAX_ANALYSIS_LIMIT = 200
 const SUGGEST_RESPONSE_FORMAT = {
   type: 'object',
   properties: {
