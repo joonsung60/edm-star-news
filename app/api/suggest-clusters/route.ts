@@ -592,6 +592,23 @@ async function filterDuplicateSuggestions(
   return { suggestions: filtered, duplicateSkipCount }
 }
 
+async function markRawArticlesSuggested(suggestions: SuggestionWithArticles[]): Promise<void> {
+  const articleIds = Array.from(new Set(suggestions.flatMap((suggestion) => suggestion.articleIds)))
+  if (articleIds.length === 0) return
+
+  const { error } = await supabase
+    .from('raw_articles')
+    .update({
+      suggestion_state: 'suggested',
+      suggestion_last_checked_at: new Date().toISOString(),
+    })
+    .in('id', articleIds)
+
+  if (error) {
+    console.error('[suggest-clusters] raw_articles suggestion_state 업데이트 실패:', error.message)
+  }
+}
+
 // ============ Entity dictionary (2-stage 후보 생성용) ============
 
 type EntityEntry = {
@@ -916,6 +933,8 @@ async function runLlmOnlyPath(
     return NextResponse.json({ error: `제안 저장 실패: ${insertError.message}` }, { status: 500 })
   }
 
+  await markRawArticlesSuggested(saveableSuggestions)
+
   const persisted = await hydrateSuggestions((inserted ?? []) as DbSuggestedCluster[])
   return NextResponse.json({
     suggestions: persisted,
@@ -970,6 +989,7 @@ export async function POST(req: NextRequest) {
     const { data: articles, error } = await supabase
       .from('raw_articles')
       .select('id, title, content, url, source_id, published_at')
+      .or('suggestion_state.is.null,suggestion_state.eq.new')
       .order('published_at', { ascending: false })
       .limit(limit)
 
@@ -1075,6 +1095,8 @@ export async function POST(req: NextRequest) {
     if (insertError) {
       return NextResponse.json({ error: `제안 저장 실패: ${insertError.message}` }, { status: 500 })
     }
+
+    await markRawArticlesSuggested(saveableSuggestions)
 
     const persisted = await hydrateSuggestions((inserted ?? []) as DbSuggestedCluster[])
     console.log(`[suggest-clusters] 저장: ${persisted.length}건`)

@@ -1,17 +1,21 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Barlow_Condensed, Noto_Sans_KR } from "next/font/google";
 import { CATEGORY_NAV, GENRE_NAV } from "@/lib/taxonomy";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const barlowCondensed = Barlow_Condensed({
+  weight: ["700", "900"],
   subsets: ["latin"],
+  variable: "--font-display",
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const notoSansKR = Noto_Sans_KR({
+  weight: ["400", "500", "700", "900"],
   subsets: ["latin"],
+  variable: "--font-body",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -40,78 +44,90 @@ export default function RootLayout({
   return (
     <html
       lang="ko"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${barlowCondensed.variable} ${notoSansKR.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-zinc-50 text-zinc-900">
-        <header className="border-b border-zinc-200 bg-white">
-          <div className="max-w-6xl mx-auto px-6">
-            <div className="flex items-center justify-between py-4">
+      <body
+        className="min-h-full flex flex-col bg-white text-[#0A0A0A]"
+        style={{ fontFamily: "var(--font-body), sans-serif" }}
+      >
+        {/* ── 헤더 ── */}
+        <header className="border-b border-gray-200 bg-white sticky top-0 z-50">
+          <div className="max-w-[1280px] mx-auto px-4 md:px-6 lg:px-8">
+            {/* 상단 바 — 로고 + 어드민 */}
+            <div className="flex items-center justify-between h-14 md:h-16">
               <Link
                 href="/"
-                className="text-2xl font-extrabold tracking-tight"
+                className="text-xl md:text-2xl font-black tracking-tight uppercase hover:text-[#0052D4] transition-colors"
+                style={{ fontFamily: "var(--font-display), sans-serif" }}
               >
                 EDM Star News
               </Link>
               {showAdminLink && (
                 <Link
                   href="/admin"
-                  className="text-xs text-zinc-500 hover:text-zinc-900 transition-colors"
+                  className="text-[11px] font-bold uppercase tracking-widest text-gray-400 hover:text-black transition-colors border border-gray-200 hover:border-gray-400 px-2.5 py-1"
+                  style={{ fontFamily: "var(--font-display), sans-serif" }}
                 >
-                  어드민
+                  Admin
                 </Link>
               )}
             </div>
-            <nav className="flex flex-wrap gap-1 sm:gap-3 text-sm font-medium">
-              {NAV_ITEMS.map((item) => (
-                <Link
-                  key={item.label}
-                  href={item.href}
-                  className="px-3 py-3 text-zinc-600 hover:text-zinc-900 whitespace-nowrap border-b-2 border-transparent hover:border-zinc-900 transition-colors"
-                >
-                  {item.label}
-                </Link>
-              ))}
-              <div className="relative group flex-shrink-0">
-                <button
-                  type="button"
-                  className="px-3 py-3 text-zinc-600 hover:text-zinc-900 whitespace-nowrap border-b-2 border-transparent group-hover:border-zinc-900 transition-colors"
-                >
+
+            {/* 카테고리 + 장르 네비 */}
+            <nav className="relative flex items-center border-t border-gray-100 -mx-4 px-4 md:mx-0 md:px-0 md:border-t-0">
+              <div className="flex min-w-0 flex-1 items-center overflow-x-auto [&::-webkit-scrollbar]:hidden">
+                {NAV_ITEMS.map((item) => (
+                  <Link
+                    key={item.label}
+                    href={item.href}
+                    className="shrink-0 px-3 py-2.5 text-sm font-medium text-gray-600 hover:text-black whitespace-nowrap border-b-2 border-transparent hover:border-black transition-colors"
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+              </div>
+
+              <details className="group relative shrink-0">
+                <summary className="genre-nav-summary list-none cursor-pointer px-3 py-2.5 text-sm font-medium text-gray-600 hover:text-black whitespace-nowrap border-b-2 border-transparent group-open:border-black transition-colors">
                   장르별 ▾
-                </button>
-                <div className="absolute left-0 top-full z-20 hidden min-w-40 rounded border border-zinc-200 bg-white py-2 shadow-lg group-hover:block">
+                </summary>
+                <div className="absolute right-0 top-full z-20 min-w-40 border border-gray-200 bg-white py-1.5 shadow-lg">
                   {GENRE_NAV.map((item) => (
                     <Link
                       key={item.slug}
                       href={`/genre/${item.slug}`}
-                      className="block px-4 py-2 text-sm text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900"
+                      className="block px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-black transition-colors"
                     >
                       {item.label}
                     </Link>
                   ))}
                 </div>
-              </div>
+              </details>
             </nav>
           </div>
         </header>
+
+        {/* ── 메인 ── */}
         <main className="flex-1">{children}</main>
-        <footer className="border-t border-zinc-200 bg-white mt-12">
-          <div className="max-w-6xl mx-auto px-6 py-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between text-sm text-zinc-500">
-            <div className="flex items-center gap-5">
-              <Link
-                href="/about"
-                className="hover:text-zinc-900 transition-colors"
-              >
-                소개
-              </Link>
-              <a
-                href="mailto:gwakjoonsung@gmail.com"
-                className="hover:text-zinc-900 transition-colors"
-              >
-                문의
-              </a>
-            </div>
-            <div className="text-xs text-zinc-400">
-              © 2026 EDM Star News · 발행인 곽준성
+
+        {/* ── 푸터 ── */}
+        <footer className="border-t border-gray-200 bg-[#F7F7F7] mt-16">
+          <div className="max-w-[1280px] mx-auto px-4 md:px-6 lg:px-8 py-8">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex items-center gap-5 text-sm text-gray-500">
+                <Link href="/about" className="hover:text-black transition-colors">
+                  소개
+                </Link>
+                <a
+                  href="mailto:gwakjoonsung@gmail.com"
+                  className="hover:text-black transition-colors"
+                >
+                  문의
+                </a>
+              </div>
+              <div className="text-xs text-gray-400">
+                © 2026 EDM Star News · 발행인 곽준성
+              </div>
             </div>
           </div>
         </footer>

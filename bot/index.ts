@@ -1,15 +1,48 @@
+import "dotenv/config";
+import { setDefaultResultOrder } from "node:dns";
+import { Agent } from "node:https";
 import { Bot, InlineKeyboard } from "grammy";
 
-const BOT_TOKEN = "8994497493:AAGOAnT--Na12X7ZU6w-JVTw2EG4ZFsjzyY";
+setDefaultResultOrder("ipv4first");
+
+const BOT_TOKEN = process.env.BOT_TOKEN;
 const ALLOWED_USERS = [8322528068];
 const LOCAL_API = "http://localhost:3000";
 
-const bot = new Bot(BOT_TOKEN);
+if (!BOT_TOKEN) {
+  throw new Error("BOT_TOKEN 환경변수가 없습니다. Telegram bot token을 설정하세요.");
+}
+
+// WSL2 환경에서 api.telegram.org의 IPv6 주소로 SYN이 빠져나가지 못해 ETIMEDOUT으로
+// 죽는 케이스가 있다. family: 4를 강제해 socket이 무조건 IPv4로만 열리게 한다.
+const ipv4Agent = new Agent({ family: 4, keepAlive: true });
+
+const bot = new Bot(BOT_TOKEN, {
+  client: {
+    baseFetchConfig: { agent: ipv4Agent, compress: true },
+  },
+});
+
+bot.catch((err) => {
+  console.error("Telegram bot 처리 중 오류:", err.error);
+});
+
+// update 수신 여부 확인
+bot.use(async (ctx, next) => {
+  console.log("Telegram update 수신:", {
+    updateId: ctx.update.update_id,
+    message: ctx.message?.text,
+    callbackQuery: ctx.callbackQuery?.data,
+    from: ctx.from?.id,
+  });
+  await next();
+});
 
 // 허용된 사용자만 접근
 bot.use(async (ctx, next) => {
   const userId = ctx.from?.id;
   if (!userId || !ALLOWED_USERS.includes(userId)) {
+    console.log("ALLOWED_USERS 차단:", userId ?? "unknown");
     await ctx.reply("접근 권한이 없습니다.");
     return;
   }
@@ -18,6 +51,7 @@ bot.use(async (ctx, next) => {
 
 // /start
 bot.command("start", async (ctx) => {
+  console.log("/start 진입:", ctx.from?.id);
   await ctx.reply(
     "EDM Star News 봇입니다.\n\n" +
     "/collect - RSS 수집\n" +
@@ -28,6 +62,7 @@ bot.command("start", async (ctx) => {
 
 // /collect
 bot.command("collect", async (ctx) => {
+  console.log("/collect 진입:", ctx.from?.id);
   const msg = await ctx.reply("RSS 수집 중...");
   try {
     const res = await fetch(`${LOCAL_API}/api/collect`, { method: "POST" });
@@ -84,52 +119,90 @@ bot.callbackQuery(/^approve:(.+)$/, async (ctx) => {
   await ctx.answerCallbackQuery();
   await ctx.editMessageReplyMarkup({ reply_markup: new InlineKeyboard() });
   const msg = await ctx.reply("기사 생성 중...");
+  let approved = false;
 
   try {
-    // 1. approved 상태로 변경
-    await fetch(`${LOCAL_API}/api/suggest-clusters/${id}`, {
+    // 1. approved 상태로 변경 + suggestion row를 응답에서 직접 사용 (admin과 동일한 데이터 출처)
+    const approveRes = await fetch(`${LOCAL_API}/api/suggest-clusters/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: "approved" }),
     });
+    const approveData = await approveRes.json().catch(() => ({}));
+    console.log("PATCH approve 응답:", approveRes.status, approveData);
+    if (!approveRes.ok || approveData.error) {
+      throw new Error(
+        `제안 승인 실패 (status ${approveRes.status}): ${approveData.error ?? approveRes.statusText}`
+      );
+    }
+    approved = true;
 
-    // 2. 클러스터 생성
-    const suggestRes = await fetch(`${LOCAL_API}/api/suggest-clusters?status=approved`);
-    const suggestData = await suggestRes.json();
-    const suggestion = suggestData.suggestions?.find((s: any) => s.id === id);
+    const suggestion = approveData.suggestion;
+    const topic = typeof suggestion?.topic === "string" ? suggestion.topic.trim() : "";
+    const keywords = Array.isArray(suggestion?.keywords) ? suggestion.keywords : [];
+    const articleIds = Array.isArray(suggestion?.article_ids) ? suggestion.article_ids : [];
 
-    if (!suggestion) throw new Error("제안을 찾을 수 없음");
+    if (!topic) {
+      throw new Error("제안 데이터에 topic이 없습니다.");
+    }
+    if (articleIds.length === 0 && keywords.length === 0) {
+      throw new Error("제안 데이터에 articleIds와 keywords가 모두 없습니다.");
+    }
 
+    // 2. 클러스터 생성 (admin과 동일: matchMode 생략 → API 기본값 'or')
     const clusterRes = await fetch(`${LOCAL_API}/api/cluster`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        topic: suggestion.topic,
-        keywords: suggestion.keywords,
-        articleIds: suggestion.articleIds,
-        matchMode: "or",
-      }),
+      body: JSON.stringify({ topic, keywords, articleIds }),
     });
-    const clusterData = await clusterRes.json();
-    const clusterId = clusterData.cluster?.id;
-
-    if (!clusterId) throw new Error("클러스터 생성 실패");
+    const clusterData = await clusterRes.json().catch(() => ({}));
+    console.log("POST cluster 응답:", clusterRes.status, clusterData);
+    if (!clusterRes.ok || !clusterData.success) {
+      throw new Error(
+        `클러스터 생성 실패 (status ${clusterRes.status}): ${clusterData.error ?? clusterRes.statusText}`
+      );
+    }
+    const clusterId = clusterData.clusterId;
+    if (!clusterId) {
+      throw new Error(`클러스터 생성 실패: clusterId가 응답에 없습니다. payload=${JSON.stringify(clusterData)}`);
+    }
 
     // 3. 기사 생성
     const genRes = await fetch(`${LOCAL_API}/api/generate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ clusterId }),
+      body: JSON.stringify({ clusterIds: [clusterId] }),
     });
-    const genData = await genRes.json();
-    const articleId = genData.article?.id;
+    const genData = await genRes.json().catch(() => ({}));
+    console.log("POST generate 응답:", genRes.status, genData);
+    if (!genRes.ok) {
+      throw new Error(
+        `기사 생성 실패 (status ${genRes.status}): ${genData.error ?? genRes.statusText}`
+      );
+    }
 
-    // 4. suggested_clusters 상태 published로
-    await fetch(`${LOCAL_API}/api/suggest-clusters/${id}`, {
+    const genResult = genData.results?.[0];
+    if (!genResult?.success) {
+      throw new Error(`기사 생성 실패: ${genResult?.error ?? "알 수 없는 오류"}`);
+    }
+    const articleId = genResult.article?.id;
+    if (!articleId) {
+      throw new Error("기사 생성 실패: article id가 없습니다.");
+    }
+
+    // 4. suggested_clusters 상태 published로 + clusterId 연결 (admin과 동일하게 camelCase)
+    const publishRes = await fetch(`${LOCAL_API}/api/suggest-clusters/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "published", cluster_id: clusterId }),
+      body: JSON.stringify({ status: "published", clusterId }),
     });
+    const publishData = await publishRes.json().catch(() => ({}));
+    console.log("PATCH published 응답:", publishRes.status, publishData);
+    if (!publishRes.ok || publishData.error) {
+      throw new Error(
+        `제안 published 처리 실패 (status ${publishRes.status}): ${publishData.error ?? publishRes.statusText}`
+      );
+    }
 
     const keyboard = new InlineKeyboard()
       .text("게시", `publish:${articleId}`)
@@ -138,10 +211,20 @@ bot.callbackQuery(/^approve:(.+)$/, async (ctx) => {
     await ctx.api.editMessageText(
       ctx.chat.id,
       msg.message_id,
-      `기사 생성 완료\n*${genData.article?.title ?? "제목 없음"}*`,
+      `기사 생성 완료\n*${genResult.article?.title ?? "제목 없음"}*`,
       { parse_mode: "Markdown", reply_markup: keyboard }
     );
   } catch (e) {
+    if (approved) {
+      await fetch(`${LOCAL_API}/api/suggest-clusters/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "pending" }),
+      }).catch((resetError) => {
+        console.error("제안 상태 pending 복구 실패:", resetError);
+      });
+    }
+    console.error("기사 생성 버튼 처리 실패:", e);
     await ctx.api.editMessageText(ctx.chat.id, msg.message_id, `오류 발생: ${e}`);
   }
 });
@@ -210,5 +293,20 @@ bot.callbackQuery(/^delete:(.+)$/, async (ctx) => {
   }
 });
 
-bot.start();
-console.log("EDM Star News 봇 시작됨");
+async function main() {
+  try {
+    const me = await bot.api.getMe();
+    console.log(`Telegram bot token 확인됨: @${me.username}`);
+
+    await bot.start({
+      onStart: (botInfo) => {
+        console.log(`EDM Star News 봇 시작됨: @${botInfo.username}`);
+      },
+    });
+  } catch (e) {
+    console.error("Telegram bot 시작 실패:", e);
+    process.exit(1);
+  }
+}
+
+void main();

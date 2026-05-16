@@ -24,3 +24,11 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+.genre-nav-summary::-webkit-details-marker {
+  display: none;
+}
+
+.genre-nav-summary::marker {
+  content: "";
+}

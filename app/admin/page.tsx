@@ -828,7 +828,7 @@ function SuggestTab() {
   const handleReject = async (s: PersistedSuggestion) => {
     setProcessing(s.id)
     try {
-      const data = await patchStatus(s.id, { status: 'rejected' })
+      const data = await patchStatus(s.id, { status: 'rejected', hideRawArticles: true })
       if (data.error) {
         setResults((r) => ({ ...r, [s.id]: { state: 'error', message: data.error } }))
       } else {

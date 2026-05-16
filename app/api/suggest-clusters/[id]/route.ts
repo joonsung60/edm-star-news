@@ -3,6 +3,24 @@ import { supabase } from '@/lib/supabase'
 
 const ALLOWED_STATUSES = new Set(['pending', 'approved', 'rejected', 'published'])
 
+type SuggestedClusterRow = {
+  article_ids?: string[] | null
+}
+
+async function updateRawArticleSuggestionState(
+  articleIds: string[],
+  updates: Record<string, string | null>
+): Promise<string | null> {
+  if (articleIds.length === 0) return null
+
+  const { error } = await supabase
+    .from('raw_articles')
+    .update(updates)
+    .in('id', articleIds)
+
+  return error?.message ?? null
+}
+
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -16,6 +34,7 @@ export async function PATCH(
   try {
     const body = await req.json().catch(() => ({}))
     const updates: Record<string, string | null> = {}
+    let nextStatus: string | null = null
 
     if (typeof body.status === 'string') {
       if (!ALLOWED_STATUSES.has(body.status)) {
@@ -25,6 +44,7 @@ export async function PATCH(
         )
       }
       updates.status = body.status
+      nextStatus = body.status
     }
 
     if (body.clusterId === null || typeof body.clusterId === 'string') {
@@ -47,6 +67,31 @@ export async function PATCH(
     }
     if (!data) {
       return NextResponse.json({ error: '제안을 찾을 수 없습니다.' }, { status: 404 })
+    }
+
+    const articleIds = Array.isArray((data as SuggestedClusterRow).article_ids)
+      ? (data as SuggestedClusterRow).article_ids ?? []
+      : []
+    const now = new Date().toISOString()
+    let rawArticleUpdateError: string | null = null
+
+    if (nextStatus === 'rejected' && body.hideRawArticles === true) {
+      rawArticleUpdateError = await updateRawArticleSuggestionState(articleIds, {
+        suggestion_state: 'ignored',
+        suggestion_rejected_at: now,
+      })
+    }
+
+    if (nextStatus === 'published') {
+      rawArticleUpdateError = await updateRawArticleSuggestionState(articleIds, {
+        suggestion_state: 'used',
+        suggestion_used_at: now,
+      })
+    }
+
+    if (rawArticleUpdateError) {
+      console.error('[suggest-clusters] raw_articles suggestion_state 업데이트 실패:', rawArticleUpdateError)
+      return NextResponse.json({ suggestion: data, rawArticleUpdateError }, { status: 500 })
     }
 
     return NextResponse.json({ suggestion: data })
