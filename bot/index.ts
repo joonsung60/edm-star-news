@@ -8,6 +8,7 @@ setDefaultResultOrder("ipv4first");
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const ALLOWED_USERS = [8322528068];
 const LOCAL_API = "http://localhost:3000";
+const ARTICLE_PREVIEW_LENGTH = 500;
 
 if (!BOT_TOKEN) {
   throw new Error("BOT_TOKEN 환경변수가 없습니다. Telegram bot token을 설정하세요.");
@@ -22,6 +23,19 @@ const bot = new Bot(BOT_TOKEN, {
     baseFetchConfig: { agent: ipv4Agent, compress: true },
   },
 });
+
+function formatArticlePreview(content: unknown): string {
+  if (typeof content !== "string") {
+    return "";
+  }
+
+  const trimmed = content.trim();
+  if (trimmed.length <= ARTICLE_PREVIEW_LENGTH) {
+    return trimmed;
+  }
+
+  return `${trimmed.slice(0, ARTICLE_PREVIEW_LENGTH)}...`;
+}
 
 bot.catch((err) => {
   console.error("Telegram bot 처리 중 오류:", err.error);
@@ -211,8 +225,8 @@ bot.callbackQuery(/^approve:(.+)$/, async (ctx) => {
     await ctx.api.editMessageText(
       ctx.chat.id,
       msg.message_id,
-      `기사 생성 완료\n*${genResult.article?.title ?? "제목 없음"}*`,
-      { parse_mode: "Markdown", reply_markup: keyboard }
+      `기사 생성 완료\n\n${genResult.article?.title ?? "제목 없음"}\n\n${formatArticlePreview(genResult.article?.content)}`,
+      { reply_markup: keyboard }
     );
   } catch (e) {
     if (approved) {

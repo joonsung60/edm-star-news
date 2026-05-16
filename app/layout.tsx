@@ -53,27 +53,54 @@ export default function RootLayout({
         {/* ── 헤더 ── */}
         <header className="border-b border-gray-200 bg-white sticky top-0 z-50">
           <div className="max-w-[1280px] mx-auto px-4 md:px-6 lg:px-8">
-            {/* 상단 바 — 로고 + 어드민 */}
-            <div className="flex items-center justify-between h-14 md:h-16">
-              <Link
-                href="/"
-                className="text-xl md:text-2xl font-black tracking-tight uppercase hover:text-[#0052D4] transition-colors"
-                style={{ fontFamily: "var(--font-display), sans-serif" }}
-              >
-                EDM Star News
-              </Link>
-              {showAdminLink && (
+            {/* 상단 바 — 로고 + 슬로건 + 우측 액션 */}
+            <div className="flex items-center justify-between gap-4 py-3 md:py-4">
+              <div className="min-w-0">
                 <Link
-                  href="/admin"
-                  className="text-[11px] font-bold uppercase tracking-widest text-gray-400 hover:text-black transition-colors border border-gray-200 hover:border-gray-400 px-2.5 py-1"
+                  href="/"
+                  className="block text-2xl md:text-3xl font-black leading-none tracking-tight uppercase hover:text-[#0052D4] transition-colors"
                   style={{ fontFamily: "var(--font-display), sans-serif" }}
                 >
-                  Admin
+                  EDM Star News
                 </Link>
-              )}
+                <p className="mt-1 text-xs font-medium text-gray-500">
+                  EDM의 순간을 기록합니다
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/search"
+                  aria-label="검색"
+                  title="검색"
+                  className="flex h-8 w-8 items-center justify-center border border-gray-200 text-gray-500 transition-colors hover:border-gray-400 hover:text-black"
+                >
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 24 24"
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <circle cx="11" cy="11" r="7" />
+                    <path d="m20 20-3.5-3.5" />
+                  </svg>
+                </Link>
+                {showAdminLink && (
+                  <Link
+                    href="/admin"
+                    className="text-[11px] font-bold uppercase tracking-widest text-gray-400 hover:text-black transition-colors border border-gray-200 hover:border-gray-400 px-2.5 py-1"
+                    style={{ fontFamily: "var(--font-display), sans-serif" }}
+                  >
+                    Admin
+                  </Link>
+                )}
+              </div>
             </div>
 
-            {/* 카테고리 + 장르 네비 */}
+            {/* 하단 바 — 카테고리 네비 */}
             <nav className="relative flex items-center border-t border-gray-100 -mx-4 px-4 md:mx-0 md:px-0 md:border-t-0">
               <div className="flex min-w-0 flex-1 items-center overflow-x-auto [&::-webkit-scrollbar]:hidden">
                 {NAV_ITEMS.map((item) => (
