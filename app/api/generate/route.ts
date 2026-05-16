@@ -234,6 +234,10 @@ async function generateKoreanArticle(articles: SourceArticle[]): Promise<Generat
         system: SYSTEM_PROMPT_A,
         prompt: `아래 소스들을 참고해 한국어 뉴스 기사를 새로 작성하세요.
 
+[아티스트 표기 규칙]
+아래 목록에 있는 아티스트는 반드시 지정된 표기법을 따르세요. 값이 영문과 같으면 한글 음역을 절대 하지 말고 영문 그대로 유지하세요.
+${displayNameRules}
+
 중요:
 - 소스 내용을 그대로 복사하지 마세요.
 - 영어 원문 문장, 사이트 메뉴, 태그, 공유 버튼, 관련 기사 목록은 출력하지 마세요.
@@ -374,4 +378,6 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ results })
+}
+({ results })
 }
