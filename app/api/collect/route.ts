@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { extractArticleText, extractArticleTitle, extractEmbedUrl, extractImageUrl, isUrlLikeTitle, titleFromUrl } from '@/lib/article-extraction'
+import { extractArticleText, extractArticleTitle, extractImageUrl, isUrlLikeTitle, titleFromUrl } from '@/lib/article-extraction'
 import Parser from 'rss-parser'
 
 const parser = new Parser()
@@ -50,7 +50,7 @@ async function fetchFeed(url: string) {
   return parser.parseString(text)
 }
 
-async function fetchArticleContent(url: string): Promise<{ content: string; imageUrl: string | null; title: string | null; embedUrl: string | null }> {
+async function fetchArticleContent(url: string): Promise<{ content: string; imageUrl: string | null; title: string | null }> {
   try {
     const res = await fetch(url, { headers: REQUEST_HEADERS, signal: AbortSignal.timeout(10000) })
     const html = await res.text()
@@ -58,11 +58,10 @@ async function fetchArticleContent(url: string): Promise<{ content: string; imag
     const title = extractArticleTitle(html, url)
     const imageUrl = extractImageUrl(html)
     const content = extractArticleText(html, 5000)
-    const embedUrl = extractEmbedUrl(html)
 
-    return { content, imageUrl, title, embedUrl }
+    return { content, imageUrl, title }
   } catch {
-    return { content: '', imageUrl: null, title: titleFromUrl(url), embedUrl: null }
+    return { content: '', imageUrl: null, title: titleFromUrl(url) }
   }
 }
 
@@ -99,7 +98,7 @@ async function collectFromRSS(): Promise<{ collected: number; failures: CollectF
 
         if (existing) continue
 
-        const { content, imageUrl, title: extractedTitle, embedUrl } = await fetchArticleContent(item.link)
+        const { content, imageUrl, title: extractedTitle } = await fetchArticleContent(item.link)
         const feedTitle = typeof item.title === 'string' ? item.title.trim() : ''
         const title = feedTitle && !isUrlLikeTitle(feedTitle)
           ? feedTitle
@@ -111,7 +110,6 @@ async function collectFromRSS(): Promise<{ collected: number; failures: CollectF
           content,
           url: item.link,
           image_url: imageUrl,
-          embed_url: embedUrl,
           author: item.creator || null,
           published_at: parsePublishedAt(item.pubDate || item.isoDate),
         })
@@ -147,7 +145,7 @@ async function collectFromUrls(urls: string[]): Promise<number> {
 
       if (existing) continue
 
-      const { content, imageUrl, title, embedUrl } = await fetchArticleContent(url)
+      const { content, imageUrl, title } = await fetchArticleContent(url)
 
       await supabase.from('raw_articles').insert({
         source_id: null,
@@ -155,7 +153,6 @@ async function collectFromUrls(urls: string[]): Promise<number> {
         content,
         url,
         image_url: imageUrl,
-        embed_url: embedUrl,
         published_at: new Date().toISOString(),
       })
 

@@ -53,7 +53,6 @@ type RawArticleRow = {
   url: string
   published_at: string | null
   source_id: string | number | null
-  embed_url: string | null
 }
 
 type SourceMeta = {
@@ -304,10 +303,12 @@ async function generateKoreanArticle(articles: SourceArticle[]): Promise<Generat
         prompt: `아래 소스들을 참고해 한국어 뉴스 기사를 새로 작성하세요.
 
 [displayNameRules]
-아래 목록은 이번 요청에서 한국어 표기가 확인된 아티스트명, 장소명 등 고유명사 목록입니다.
-- 제목에서는 목록의 한국어 표기만 사용하고 영문 병기를 하지 마세요.
-- 본문에서는 해당 고유명사가 처음 등장할 때 한 번만 "한국어(영문)" 형태로 쓰고, 이후에는 한국어만 쓰세요.
-- 값이 영문과 같으면 한국어 표기가 없는 항목이므로 영문 그대로 유지하세요.
+아래 목록은 이번 요청에서 사용할 수 있는 고유명사 표기 허용 목록입니다.
+- 오른쪽 값이 한국어인 항목만 한국어 표기를 사용할 수 있습니다.
+- 제목에서는 허용된 한국어 표기만 사용하고 영문 병기를 하지 마세요.
+- 본문에서는 허용된 한국어 표기가 있는 고유명사가 처음 등장할 때 한 번만 "한국어(영문)" 형태로 쓰고, 이후에는 한국어만 쓰세요.
+- 목록에 없거나, 값이 영문과 같거나, 한국어 표기가 애매한 아티스트명·장소명·행사명은 영문 그대로 유지하세요.
+- 모델 지식으로 새 한국어 표기나 음역을 만들지 마세요. 예: Floating Points, Honey Dijon, Joy Orbison, Field Day, Represent는 목록에 한국어 값이 없으면 영문 그대로 써야 합니다.
 ${displayNameRules}
 
 [출력 지시]
@@ -392,7 +393,7 @@ export async function POST(req: NextRequest) {
 
       const { data: rawArticles, error: rawError } = await supabase
         .from('raw_articles')
-        .select('id, title, content, url, published_at, source_id, embed_url')
+        .select('id, title, content, url, published_at, source_id')
         .in('id', rawArticleIds)
 
       if (rawError) throw rawError
@@ -433,7 +434,6 @@ export async function POST(req: NextRequest) {
       const slug = await ensureUniqueSlug(normalizeSlug(generated.slug))
       const category = normalizeCategory(generated.category)
       const genre = normalizeGenreForCategory(category, generated.genre)
-      const embedUrl = typedRawArticles.find((article) => article.embed_url)?.embed_url ?? null
       const content = appendSingleSourceAttribution(generated.content, typedRawArticles, sourceMeta)
 
       // articles 테이블에 저장
@@ -447,7 +447,6 @@ export async function POST(req: NextRequest) {
           slug,
           category,
           genre,
-          embed_url: embedUrl,
         })
         .select()
         .single()
