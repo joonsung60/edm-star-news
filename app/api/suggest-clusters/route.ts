@@ -18,7 +18,10 @@ const SUGGEST_SYSTEM = `당신은 전세계 전자음악 씬 전반을 다루는
 - 거절 시 반드시 이유를 reason 필드에 넣으세요.
 - 모든 소스를 동등하게 취급하세요. 특정 매체의 등급이나 권위를 기준으로 거르지 마세요.
 - 연도 단독(2025, 2026 등), 매체명, 사이트명, 시리즈명, 인터뷰 형식 표현(catches up with, chats to, talks to 등), 연말 결산/차트/베스트 목록 문구는 절대 승인 기준으로 사용하지 마세요.
+- "음악산업의 변화와 도전", "음악 페스티벌과 라이브 공연", "전자음악 씬 동향"처럼 여러 기사를 넓은 테마로 요약한 추상 토픽은 절대 만들지 마세요.
+- topic에는 가능한 한 구체적 고유명사(아티스트명, 페스티벌명, 클럽명, 레이블명, 곡/앨범/EP명, 제품명, 책 제목 등)를 포함하세요.
 - 좋은 예: "Music On Festival 취소 사태", "EDC Las Vegas 2026 관련 소식", "Armin van Buuren 'A State of Trance 2026' 발매", "John Summit 신곡 'Light Years' 공개"
+- 나쁜 예: "음악산업의 변화와 도전", "음악 페스티벌과 라이브 공연", "전자음악 씬 동향", "클럽 문화의 변화"
 
 응답 작성 시:
 - topic은 한국어로, 구체적이고 명확하게 작성하세요.
@@ -214,6 +217,10 @@ const LOW_SIGNAL_CLUSTER_PATTERNS = [
   /\b(?:catches up with|chats to|talks to|interview with|in conversation with)\b/i,
   /\b(?:best electronic music|best albums|best tracks|top-selling tracks|top selling tracks|chart toppers)\b/i,
   /\bfestival line-ups you might\b/i,
+  /음악\s*산업(?:의)?\s*(?:변화|도전|동향)/i,
+  /음악\s*페스티벌(?:과|와)\s*라이브\s*공연/i,
+  /전자\s*음악\s*씬\s*(?:동향|변화|흐름)/i,
+  /클럽\s*문화(?:의)?\s*(?:변화|동향|흐름)/i,
 ]
 
 async function attachSourceMeta(articles: RawArticle[]): Promise<RawArticle[]> {
@@ -385,9 +392,10 @@ function normalizeSuggestion(
   const reason = String(suggestion.reason ?? '').trim()
   const cohesionScore = typeof suggestion.cohesionScore === 'number'
     ? Math.round(suggestion.cohesionScore)
-    : articleIds.length === 1
-      ? STAGE2_DEFAULT_COHESION
-      : calculateCohesionScore(articleIds, commonEntities.length > 0 ? commonEntities : keywords, rawArticles)
+    : Math.max(
+      STAGE2_DEFAULT_COHESION,
+      calculateCohesionScore(articleIds, commonEntities.length > 0 ? commonEntities : keywords, rawArticles)
+    )
 
   if (
     !topic
@@ -638,8 +646,9 @@ const ENTITY_DICT_CANDIDATE_PATHS = [
 
 const ENTITY_HAYSTACK_CONTENT_LIMIT = 500
 const STAGE2_DEFAULT_COHESION = 50
-const LLM_INPUT_MAX = 60
-const NO_ENTITY_RATIO_MAX = 0.3
+const LLM_INPUT_MAX = 120
+const NO_ENTITY_RATIO_MAX = 0.6
+const LLM_BATCH_SIZE = 20
 
 function loadEntityDictionary(): EntityEntry[] | null {
   for (const rel of ENTITY_DICT_CANDIDATE_PATHS) {
@@ -731,6 +740,39 @@ function buildEntityIndex(
     }
   }
   return { articleEntities, entityArticles }
+}
+
+function chunkArticles(articles: RawArticle[], size: number): RawArticle[][] {
+  const chunks: RawArticle[][] = []
+  for (let i = 0; i < articles.length; i += size) {
+    chunks.push(articles.slice(i, i + size))
+  }
+  return chunks
+}
+
+function buildClusterPrompt(batch: RawArticle[]): string {
+  const articlesText = batch
+    .map((article) =>
+      [
+        `[${article.id}]`,
+        article.sourceName ? `매체: ${article.sourceName}` : null,
+        `제목: ${article.title}`,
+        `본문: ${articleSnippet(article) || '(본문 없음)'}`,
+      ].filter(Boolean).join('\n')
+    )
+    .join('\n---\n')
+
+  return `다음 기사 목록(${batch.length}개)을 분석하세요.
+
+이 기사들을 읽고 같은 사건/릴리즈/행사/인물을 다루는 기사끼리 묶어서 토픽을 제안하세요.
+하나의 클러스터는 반드시 하나의 구체적 사건이어야 합니다.
+서로 다른 별개의 사건을 다루는 기사는 절대 같은 클러스터로 묶지 마세요.
+여러 기사를 "음악산업", "페스티벌", "라이브 공연", "씬 동향" 같은 넓은 테마로 묶지 마세요.
+topic에는 구체적 고유명사나 작품명/행사명/제품명을 포함하세요.
+단독 기사도 한국어 EDM 기사로 쓸 만한 가치가 있으면 단독으로 제안하세요.
+
+기사 목록:
+${articlesText}`
 }
 
 async function runLlmOnlyPath(
@@ -946,61 +988,56 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    // ───── Stage 2: LLM이 클러스터링 + 토픽 제안 ─────
-    const articlesText = llmInput
-      .map((article) =>
-        [
-          `[${article.id}]`,
-          article.sourceName ? `매체: ${article.sourceName}` : null,
-          `제목: ${article.title}`,
-          `본문: ${articleSnippet(article) || '(본문 없음)'}`,
-        ].filter(Boolean).join('\n')
+    // ───── Stage 2: LLM이 배치별 클러스터링 + 토픽 제안 ─────
+    const batches = chunkArticles(llmInput, LLM_BATCH_SIZE)
+    const normalized: SuggestionWithArticles[] = []
+    let llmSuggestionCount = 0
+
+    for (const [batchIndex, batch] of batches.entries()) {
+      const ollamaRes = await fetch(`${ollamaUrl}/api/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: suggestModel,
+          system: SUGGEST_SYSTEM,
+          prompt: buildClusterPrompt(batch),
+          format: SUGGEST_RESPONSE_FORMAT,
+          stream: false,
+        }),
+      })
+
+      if (!ollamaRes.ok) {
+        return NextResponse.json(
+          { error: `Ollama 응답 오류: ${ollamaRes.status}`, batchIndex },
+          { status: 502 }
+        )
+      }
+
+      const ollamaData = await ollamaRes.json()
+      const responseText: string = ollamaData.response ?? ''
+
+      let parsed: { suggestions?: Suggestion[] }
+      try {
+        parsed = parseSuggestions(responseText)
+      } catch (err) {
+        return NextResponse.json(
+          { error: String(err), batchIndex, raw: responseText.slice(0, 500) },
+          { status: 502 }
+        )
+      }
+
+      const suggestions = parsed.suggestions ?? []
+      llmSuggestionCount += suggestions.length
+      const batchValidIds = new Set(batch.map((a) => a.id))
+      normalized.push(
+        ...suggestions
+          .map((s) => normalizeSuggestion(s, batchValidIds, articleMeta, batch))
+          .filter((s): s is SuggestionWithArticles => s !== null)
       )
-      .join('\n---\n')
-
-    const clusterPrompt = `다음 기사 목록(${llmInput.length}개)을 분석하세요.
-
-이 기사들을 읽고 같은 사건/릴리즈/행사/인물을 다루는 기사끼리 묶어서 토픽을 제안하세요.
-하나의 클러스터는 반드시 하나의 구체적 사건이어야 합니다.
-서로 다른 별개의 사건을 다루는 기사는 절대 같은 클러스터로 묶지 마세요.
-단독 기사도 한국어 EDM 기사로 쓸 만한 가치가 있으면 단독으로 제안하세요.
-
-기사 목록:
-${articlesText}`
-
-    const ollamaRes = await fetch(`${ollamaUrl}/api/generate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: suggestModel,
-        system: SUGGEST_SYSTEM,
-        prompt: clusterPrompt,
-        format: SUGGEST_RESPONSE_FORMAT,
-        stream: false,
-      }),
-    })
-
-    if (!ollamaRes.ok) {
-      return NextResponse.json({ error: `Ollama 응답 오류: ${ollamaRes.status}` }, { status: 502 })
     }
-
-    const ollamaData = await ollamaRes.json()
-    const responseText: string = ollamaData.response ?? ''
-
-    let parsed: { suggestions?: Suggestion[] }
-    try {
-      parsed = parseSuggestions(responseText)
-    } catch (err) {
-      return NextResponse.json({ error: String(err), raw: responseText.slice(0, 500) }, { status: 502 })
-    }
-
-    const llmInputValidIds = new Set(llmInput.map((a) => a.id))
-    const normalized = (parsed.suggestions ?? [])
-      .map((s) => normalizeSuggestion(s, llmInputValidIds, articleMeta, llmInput))
-      .filter((s): s is SuggestionWithArticles => s !== null)
 
     console.log(
-      `[suggest-clusters] LLM 제안: ${parsed.suggestions?.length ?? 0}건,`
+      `[suggest-clusters] 배치 ${batches.length}개, LLM 제안: ${llmSuggestionCount}건,`
       + ` 정규화 통과: ${normalized.length}건`
     )
 
@@ -1015,9 +1052,9 @@ ${articlesText}`
         entityMatchedCount: withEntities.length,
         noEntityCount: withoutEntities.length,
         llmInputCount: llmInput.length,
-        llmSuggestionCount: parsed.suggestions?.length ?? 0,
+        batchCount: batches.length,
+        llmSuggestionCount,
         normalizedSuggestionCount: 0,
-        rawResponsePreview: responseText.slice(0, 500),
       })
     }
 
@@ -1035,7 +1072,8 @@ ${articlesText}`
         entityMatchedCount: withEntities.length,
         noEntityCount: withoutEntities.length,
         llmInputCount: llmInput.length,
-        llmSuggestionCount: parsed.suggestions?.length ?? 0,
+        batchCount: batches.length,
+        llmSuggestionCount,
         normalizedSuggestionCount: normalized.length,
         duplicateSkipCount,
       })
@@ -1071,7 +1109,8 @@ ${articlesText}`
       entityMatchedCount: withEntities.length,
       noEntityCount: withoutEntities.length,
       llmInputCount: llmInput.length,
-      llmSuggestionCount: parsed.suggestions?.length ?? 0,
+      batchCount: batches.length,
+      llmSuggestionCount,
       normalizedSuggestionCount: normalized.length,
       duplicateSkipCount,
     })

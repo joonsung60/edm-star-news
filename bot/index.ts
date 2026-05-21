@@ -49,6 +49,18 @@ function formatArticleMessage(title: unknown, content: unknown): string {
   return preview ? `${safeTitle}\n\n${preview}` : safeTitle;
 }
 
+async function replyWithTopicCards(ctx: any, suggestions: any[]) {
+  for (const s of suggestions) {
+    const keywords = Array.isArray(s.keywords) ? s.keywords.join(", ") : s.keywords;
+    const articleCount = s.articles?.length ?? s.articleIds?.length ?? s.article_ids?.length ?? 0;
+    const text = `*${s.topic}*\n키워드: ${keywords}\n관련 기사: ${articleCount}개`;
+    const keyboard = new InlineKeyboard()
+      .text("기사 생성", `approve:${s.id}`)
+      .text("거절", `reject:${s.id}`);
+    await ctx.reply(text, { parse_mode: "Markdown", reply_markup: keyboard });
+  }
+}
+
 bot.catch((err) => {
   console.error("Telegram bot 처리 중 오류:", err.error);
 });
@@ -82,6 +94,7 @@ bot.command("start", async (ctx) => {
     "EDM Star News 봇입니다.\n\n" +
     "/collect - RSS 수집\n" +
     "/suggest - 토픽 제안\n" +
+    "/topics - 제안된 토픽 목록\n" +
     "/articles - 기사 초안 목록"
   );
 });
@@ -125,16 +138,38 @@ bot.command("suggest", async (ctx) => {
     );
 
     // 각 제안을 카드로 표시
-    for (const s of suggestions) {
-      const keywords = Array.isArray(s.keywords) ? s.keywords.join(", ") : s.keywords;
-      const articleCount = s.articles?.length ?? s.articleIds?.length ?? 0;
-      const text = `*${s.topic}*\n키워드: ${keywords}\n관련 기사: ${articleCount}개`;
-      const keyboard = new InlineKeyboard()
-        .text("기사 생성", `approve:${s.id}`)
-        .text("거절", `reject:${s.id}`);
-      await ctx.reply(text, { parse_mode: "Markdown", reply_markup: keyboard });
-    }
+    await replyWithTopicCards(ctx, suggestions);
   } catch (e) {
+    await ctx.api.editMessageText(ctx.chat.id, msg.message_id, `오류 발생: ${e}`);
+  }
+});
+
+// /topics
+bot.command("topics", async (ctx) => {
+  console.log("/topics 진입:", ctx.from?.id);
+  const msg = await ctx.reply("제안된 토픽 목록 불러오는 중...");
+  try {
+    const res = await fetch(`${LOCAL_API}/api/suggest-clusters?status=pending`);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.error) {
+      throw new Error(`토픽 목록 조회 실패 (status ${res.status}): ${data.error ?? res.statusText}`);
+    }
+
+    const suggestions = data.suggestions ?? [];
+
+    if (suggestions.length === 0) {
+      await ctx.api.editMessageText(ctx.chat.id, msg.message_id, "제안된 토픽이 없습니다.");
+      return;
+    }
+
+    await ctx.api.editMessageText(
+      ctx.chat.id,
+      msg.message_id,
+      `제안된 토픽 ${suggestions.length}개`
+    );
+    await replyWithTopicCards(ctx, suggestions);
+  } catch (e) {
+    console.error("토픽 목록 조회 실패:", e);
     await ctx.api.editMessageText(ctx.chat.id, msg.message_id, `오류 발생: ${e}`);
   }
 });

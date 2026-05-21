@@ -206,7 +206,7 @@ function scoreArticleText(text: string, attrs = ''): number {
   return text.length + paragraphScore + articleHint - boilerplateHits * 250
 }
 
-export function extractArticleText(html: string, maxLength = 5000): string {
+export function extractArticleText(html: string, maxLength = 20000): string {
   const pageWithoutChrome = html
     .replace(/<!--[\s\S]*?-->/g, ' ')
     .replace(/<header[^>]*>[\s\S]*?<\/header>/gi, ' ')

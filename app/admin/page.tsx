@@ -5,9 +5,10 @@ import type { PercentCrop } from 'react-image-crop'
 import { ImageCropper, getCroppedDataUrl } from '@/components/ImageCropper'
 import { supabase } from '@/lib/supabase'
 
-type AdminGroup = 'rss' | 'image'
+type AdminGroup = 'rss' | 'image' | 'interview'
 type RssTab = 'collect' | 'add-urls' | 'suggest' | 'articles' | 'cluster' | 'generate'
 type ImageTab = 'image-source' | 'image-articles'
+type InterviewTab = 'discovery' | 'review'
 
 const RSS_TABS: { id: RssTab; label: string }[] = [
   { id: 'collect', label: '① RSS 수집' },
@@ -23,20 +24,27 @@ const IMAGE_TABS: { id: ImageTab; label: string }[] = [
   { id: 'image-articles', label: '생성 기사 검토' },
 ]
 
+const INTERVIEW_TABS: { id: InterviewTab; label: string }[] = [
+  { id: 'discovery', label: '인터뷰 후보 발굴' },
+  { id: 'review', label: '생성 기사 검토' },
+]
+
 export default function AdminPage() {
   const [activeGroup, setActiveGroup] = useState<AdminGroup>('rss')
   const [activeRssTab, setActiveRssTab] = useState<RssTab>('collect')
   const [activeImageTab, setActiveImageTab] = useState<ImageTab>('image-source')
+  const [activeInterviewTab, setActiveInterviewTab] = useState<InterviewTab>('discovery')
 
   return (
     <div className="max-w-4xl mx-auto p-8">
       <h1 className="text-2xl font-bold mb-8">EDM Star News 어드민</h1>
 
       <div className="mb-8 rounded border border-gray-200 bg-gray-50 p-1">
-        <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-1 sm:grid-cols-3">
           {[
             { id: 'rss', label: 'RSS 및 URL 기반 기사 생성' },
             { id: 'image', label: '이미지 소스 및 SNS 기반 기사 생성' },
+            { id: 'interview', label: '인터뷰 번역' },
           ].map((group) => (
             <button
               key={group.id}
@@ -70,6 +78,14 @@ export default function AdminPage() {
         />
       )}
 
+      {activeGroup === 'interview' && (
+        <TabBar
+          tabs={INTERVIEW_TABS}
+          activeId={activeInterviewTab}
+          onChange={(id) => setActiveInterviewTab(id as InterviewTab)}
+        />
+      )}
+
       {activeGroup === 'rss' && activeRssTab === 'collect' && <CollectTab />}
       {activeGroup === 'rss' && activeRssTab === 'add-urls' && <AddUrlsTab />}
       {activeGroup === 'rss' && activeRssTab === 'suggest' && <SuggestTab />}
@@ -79,6 +95,9 @@ export default function AdminPage() {
 
       {activeGroup === 'image' && activeImageTab === 'image-source' && <ImageSourceTab />}
       {activeGroup === 'image' && activeImageTab === 'image-articles' && <ArticlesReviewTab />}
+
+      {activeGroup === 'interview' && activeInterviewTab === 'discovery' && <InterviewDiscoveryTab />}
+      {activeGroup === 'interview' && activeInterviewTab === 'review' && <ArticlesReviewTab />}
     </div>
   )
 }
@@ -1692,3 +1711,142 @@ function formatDate(value: string) {
     minute: '2-digit',
   }).format(new Date(value))
 }
+
+type InterviewCandidate = {
+  id: string
+  title: string | null
+  url: string
+  published_at: string | null
+}
+
+function InterviewDiscoveryTab() {
+  const [candidates, setCandidates] = useState<InterviewCandidate[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [processing, setProcessing] = useState<string | null>(null)
+  const [error, setError] = useState('')
+  const [results, setResults] = useState<Record<string, { state: 'pending' | 'success' | 'error'; message: string }>>({})
+
+  const load = useCallback(async () => {
+    setIsLoading(true)
+    setError('')
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('raw_articles')
+        .select('id, title, url, published_at')
+        .or('suggestion_state.is.null,suggestion_state.eq.new')
+        .or('url.ilike.%/interview/%,url.ilike.%/feature/%,url.ilike.%/talks/%,title.ilike.%interview%,title.ilike.%in conversation%,title.ilike.%talks to%,title.ilike.%speaks to%,title.ilike.%catches up%')
+        .order('published_at', { ascending: false, nullsFirst: false })
+        .limit(50)
+
+      if (fetchError) throw fetchError
+      setCandidates((data as InterviewCandidate[]) || [])
+    } catch (err) {
+      setError(String(err))
+    }
+    setIsLoading(false)
+  }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  const handleTranslate = async (article: InterviewCandidate) => {
+    setProcessing(article.id)
+    setResults((r) => ({ ...r, [article.id]: { state: 'pending', message: '번역 중...' } }))
+    try {
+      const res = await fetch('/api/interview/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ raw_article_id: article.id }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setResults((r) => ({ ...r, [article.id]: { state: 'success', message: '번역 완료' } }))
+      } else {
+        setResults((r) => ({ ...r, [article.id]: { state: 'error', message: data.error } }))
+      }
+    } catch (err) {
+      setResults((r) => ({ ...r, [article.id]: { state: 'error', message: String(err) } }))
+    }
+    setProcessing(null)
+  }
+
+  const handleReject = async (article: InterviewCandidate) => {
+    setProcessing(article.id)
+    setResults((r) => ({ ...r, [article.id]: { state: 'pending', message: '기각 중...' } }))
+    try {
+      const res = await fetch(`/api/raw-articles/${article.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ suggestion_state: 'rejected' }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setResults((r) => ({ ...r, [article.id]: { state: 'success', message: '기각됨' } }))
+      } else {
+        setResults((r) => ({ ...r, [article.id]: { state: 'error', message: data.error } }))
+      }
+    } catch (err) {
+      setResults((r) => ({ ...r, [article.id]: { state: 'error', message: String(err) } }))
+    }
+    setProcessing(null)
+  }
+
+  return (
+    <div>
+      <div className="mb-6 flex items-center justify-between">
+        <p className="text-gray-600">인터뷰로 추정되는 원문을 찾아 번역합니다.</p>
+        <button onClick={load} disabled={isLoading} className="px-3 py-2 text-sm border rounded hover:bg-gray-50">
+          새로고침
+        </button>
+      </div>
+
+      {error && <p className="text-red-500 mb-4">{error}</p>}
+      {isLoading && <p className="text-gray-500">불러오는 중...</p>}
+
+      {!isLoading && candidates.length === 0 && !error && (
+        <p className="text-gray-500">발견된 인터뷰 후보가 없습니다.</p>
+      )}
+
+      {candidates.length > 0 && (
+        <div className="space-y-4">
+          {candidates.map(c => {
+            const result = results[c.id]
+            const isProcessing = processing === c.id
+            return (
+              <div key={c.id} className="border rounded p-4 flex items-start justify-between gap-4">
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-semibold">{c.title || '제목 없음'}</h3>
+                  <a href={c.url} target="_blank" rel="noreferrer" className="text-xs text-blue-500 hover:underline block truncate mt-1">{c.url}</a>
+                  <p className="text-xs text-gray-500 mt-1">발행일: {c.published_at ? formatDate(c.published_at) : '불명'}</p>
+                  {result && (
+                    <p className={`mt-2 text-sm ${result.state === 'success' ? 'text-green-600' : result.state === 'error' ? 'text-red-500' : 'text-gray-500'}`}>
+                      {result.message}
+                    </p>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleTranslate(c)}
+                    disabled={processing !== null || result?.state === 'success'}
+                    className="px-4 py-2 bg-black text-white text-sm rounded font-semibold disabled:opacity-50 whitespace-nowrap"
+                  >
+                    {isProcessing && result?.message !== '기각 중...' ? '처리 중...' : result?.message === '번역 완료' ? '완료' : '번역 실행'}
+                  </button>
+                  <button
+                    onClick={() => handleReject(c)}
+                    disabled={processing !== null || result?.state === 'success'}
+                    className="px-4 py-2 border border-gray-300 text-gray-700 text-sm rounded font-semibold hover:bg-gray-50 disabled:opacity-50 whitespace-nowrap"
+                  >
+                    {result?.message === '기각됨' ? '기각됨' : '기각'}
+                  </button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+

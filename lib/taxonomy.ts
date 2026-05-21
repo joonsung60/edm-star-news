@@ -14,6 +14,7 @@ export const CATEGORY_NAV: CategoryNavItem[] = [
   { slug: 'festival', label: '페스티벌', aliases: ['festival', 'festivals', 'event', 'events', 'residency', 'residencies', '페스티벌', '행사', '레지던시'] },
   { slug: 'release', label: '릴리즈', aliases: ['release', 'releases', '릴리즈', '신보'] },
   { slug: 'news', label: '뉴스', aliases: ['news', '뉴스'] },
+  { slug: 'interview', label: '인터뷰', aliases: ['interview', '인터뷰'] },
 ]
 
 export const RELEASE_GENRE_NAV: ReleaseGenreNavItem[] = [

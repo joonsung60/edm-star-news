@@ -20,6 +20,7 @@ export default async function GenrePage({
   const known = findGenre(genre)
   const label = genreLabel(genre)
   const { articles, error } = await loadPublishedArticles({
+    category: 'release',
     genre,
     limit: 50,
   })
@@ -36,7 +37,7 @@ export default async function GenrePage({
       <ArticleList
         articles={articles}
         error={error}
-        emptyMessage={`${label} 장르에 게시된 기사가 아직 없습니다.`}
+        emptyMessage={`${label} 릴리즈 기사가 아직 없습니다.`}
       />
     </div>
   )

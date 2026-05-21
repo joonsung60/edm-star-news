@@ -57,7 +57,7 @@ async function fetchArticleContent(url: string): Promise<{ content: string; imag
 
     const title = extractArticleTitle(html, url)
     const imageUrl = extractImageUrl(html)
-    const content = extractArticleText(html, 5000)
+    const content = extractArticleText(html, 20000)
 
     return { content, imageUrl, title }
   } catch {
