@@ -33,6 +33,21 @@ export async function PATCH(
 
   try {
     const body = await req.json().catch(() => ({}))
+    
+    // rawArticleId가 있으면 원문 기사 상태만 업데이트
+    if (body.rawArticleId) {
+      const { error } = await supabase
+        .from('raw_articles')
+        .update({ suggestion_state: 'ignored' })
+        .eq('id', body.rawArticleId)
+
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 })
+      }
+
+      return NextResponse.json({ success: true })
+    }
+
     const updates: Record<string, string | null> = {}
     let nextStatus: string | null = null
 

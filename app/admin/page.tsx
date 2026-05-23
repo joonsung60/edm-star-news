@@ -935,7 +935,7 @@ function SuggestTab() {
 
   const handleIgnoreArticle = async (suggestionId: string, articleId: string) => {
     try {
-      const res = await fetch('/api/suggest-clusters', {
+      const res = await fetch(`/api/suggest-clusters/${suggestionId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rawArticleId: articleId }),
