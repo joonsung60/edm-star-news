@@ -1137,3 +1137,28 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: String(err) }, { status: 500 })
   }
 }
+
+export async function PATCH(req: NextRequest) {
+  try {
+    const body = await req.json().catch(() => ({}))
+    const { rawArticleId } = body
+
+    if (!rawArticleId) {
+      return NextResponse.json({ error: 'rawArticleId가 필요합니다.' }, { status: 400 })
+    }
+
+    const { error } = await supabase
+      .from('raw_articles')
+      .update({ suggestion_state: 'ignored' })
+      .eq('id', rawArticleId)
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (err) {
+    return NextResponse.json({ error: String(err) }, { status: 500 })
+  }
+}
+

@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase'
 import { cleanArticleText, extractArticleText } from '@/lib/article-extraction'
 import displayNames from '@/lib/display-names.json'
 import { SYSTEM_PROMPT_B } from '@/lib/prompts'
+import Anthropic from '@anthropic-ai/sdk'
 
 const displayNameRules = Object.entries(displayNames as Record<string, string>)
   .filter(([en, ko]) => en !== ko)
@@ -57,14 +58,22 @@ function formatSourceDate(iso: string | null): string {
 }
 
 function collapseLineBreaksInsideQuotes(text: string): string {
-  return text.replace(/"([^"]*)"/g, (_, inner) => {
-    const fixed = inner
-      .replace(/\n+/g, ' ')
-      .replace(/ {2,}/g, ' ')
-      .trim()
+  // 유니코드 곡선 따옴표 \u201C \u201D (모델 실제 출력)
+  let result = text.replace(/\u201C([^\u201D]*)\u201D/g, (_, inner) => {
+    const fixed = inner.replace(/\n+/g, ' ').replace(/ {2,}/g, ' ').trim()
+    return `\u201C${fixed}\u201D`
+  })
+  // ASCII 따옴표
+  result = result.replace(/"([^"]*)"/g, (_, inner) => {
+    const fixed = inner.replace(/\n+/g, ' ').replace(/ {2,}/g, ' ').trim()
     return `"${fixed}"`
   })
+  return result
 }
+
+const anthropic = new Anthropic({
+  apiKey: process.env.CLAUDE_API,
+})
 
 async function fetchArticleContent(url: string): Promise<string> {
   try {
@@ -220,6 +229,11 @@ export async function POST(req: NextRequest) {
       const fresh = await fetchArticleContent(article.url)
       if (fresh && fresh.length > content.length) {
         content = fresh
+        // DB 업데이트
+        await supabase
+          .from('raw_articles')
+          .update({ content: fresh })
+          .eq('id', raw_article_id)
       }
     }
 
@@ -251,10 +265,6 @@ export async function POST(req: NextRequest) {
 
     const publishedAtStr = formatSourceDate(article.published_at)
 
-    const ollamaUrl = process.env.OLLAMA_BASE_URL || 'http://localhost:11434'
-    const ollamaModel = process.env.OLLAMA_INTERVIEW_MODEL || process.env.OLLAMA_GENERATE_MODEL || process.env.OLLAMA_MODEL || 'qwen3:14b'
-    console.log(`[Interview Translate] Using model: ${ollamaModel}`)
-
     const displayNameSection = displayNameRules 
       ? `\n[displayNameRules]\n아래 목록은 이번 요청에서 사용할 수 있는 고유명사 표기 허용 목록입니다.\n${displayNameRules}\n` 
       : ''
@@ -271,31 +281,21 @@ URL: ${article.url}
 ${content}
 `
 
-    const res = await fetch(`${ollamaUrl}/api/generate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      signal: AbortSignal.timeout(600_000), // 10분
-      body: JSON.stringify({
-        model: ollamaModel,
-        system: SYSTEM_PROMPT_B,
-        prompt: promptText,
-        stream: false,
-        think: false,
-        options: {
-          num_predict: 16384,
-          num_ctx: 16384,
-        },
-      }),
+    const message = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 8192,
+      system: SYSTEM_PROMPT_B,
+      messages: [{ role: 'user', content: promptText }],
     })
 
-    const data = await res.json()
-    if (!data.response) {
-      throw new Error('Ollama 응답이 없습니다.')
+    const firstBlock = message.content[0]
+    if (!firstBlock || firstBlock.type !== 'text') {
+      throw new Error('Claude API 응답이 없습니다.')
     }
 
-    let translatedContent = data.response.trim()
+    let translatedContent = firstBlock.text.trim()
     if (!translatedContent) {
-      throw new Error('Ollama 번역 내용이 비어 있습니다.')
+      throw new Error('Claude API 번역 내용이 비어 있습니다.')
     }
 
     console.log('[interview] 후처리 전 줄바꿈 패턴:',
@@ -304,6 +304,11 @@ ${content}
     // Step 1: 인용문 안의 줄바꿈을 공백으로 먼저 정리
     translatedContent = collapseLineBreaksInsideQuotes(translatedContent)
 
+    // Step 1.5: 단일 \n만 \n\n으로 올리기 (이미 \n\n인 건 건드리지 않음)
+    translatedContent = translatedContent
+      .replace(/\n{3,}/g, '\n\n')
+      .replace(/(?<!\n)\n(?!\n)/g, '\n\n')
+
     // Step 2: 단락 구분(\n\n)은 유지, 단락 내 단일 \n은 공백으로
     translatedContent = translatedContent
       .replace(/\n{2,}/g, '§PARA§')
@@ -311,14 +316,33 @@ ${content}
       .replace(/§PARA§/g, '\n\n')
       .trim()
 
-    const title = article.title ? applyDisplayNameMapping(article.title) : '제목 없음'
-    const slugBase = article.title ? normalizeSlug(article.title) : 'interview'
+    // 모델이 첫 줄에 출력한 한국어 제목 파싱
+    const contentLines = translatedContent.split('\n\n')
+    let generatedTitle = ''
+    if (contentLines.length > 1) {
+      const firstChunk = contentLines[0].trim()
+      if (firstChunk.length <= 150 && !firstChunk.startsWith('\u201C') && !firstChunk.startsWith('"')) {
+        generatedTitle = firstChunk.replace(/^[#*_\s]+|[#*_\s]+$/g, '').trim()
+        translatedContent = contentLines.slice(1).join('\n\n').trim()
+      }
+    }
+
+    const title = generatedTitle
+      ? applyDisplayNameMapping(generatedTitle)
+      : article.title
+        ? applyDisplayNameMapping(article.title)
+        : '제목 없음'
+
+    const slugBase = article.title
+      ? normalizeSlug(article.title)
+      : 'interview'
+
     const slug = await ensureUniqueSlug(slugBase)
 
     const cleanUrl = cleanSourceUrl(article.url)
     const disclaimer = `\n\n*이 인터뷰는 ${publishedAtStr}에 ${sourceName}에 게시된 원문을 한국어로 번역한 것입니다. [원문 보기](${cleanUrl})*`
     
-    translatedContent = applyDisplayNameMapping(translatedContent) + disclaimer
+    translatedContent = applyDisplayNameMapping(translatedContent).trimEnd() + '\n\n' + disclaimer.trimStart()
 
     const { data: savedArticle, error: insertError } = await supabase
       .from('articles')

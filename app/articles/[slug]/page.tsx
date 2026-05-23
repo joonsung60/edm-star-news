@@ -127,7 +127,7 @@ function splitArticleBlocks(
     const index = match.index ?? 0;
     const before = text.slice(cursor, index);
     blocks.push(
-      ...splitKoreanSentences(before).map((sentence) => ({
+      ...before.split('\n\n').map((s) => s.trim()).filter(Boolean).map((sentence) => ({
         type: "paragraph" as const,
         text: sentence,
       }))
@@ -141,7 +141,7 @@ function splitArticleBlocks(
   }
 
   blocks.push(
-    ...splitKoreanSentences(text.slice(cursor)).map((sentence) => ({
+    ...text.slice(cursor).split('\n\n').map((s) => s.trim()).filter(Boolean).map((sentence) => ({
       type: "paragraph" as const,
       text: sentence,
     }))
@@ -162,13 +162,6 @@ function createMetaDescription(content: string): string {
 function extractFirstMarkdownImage(content: string): string | null {
   const match = content.match(/!\[[^\]]*\]\((https?:\/\/[^)\s]+)\)/);
   return match?.[1] ?? null;
-}
-
-function splitKoreanSentences(text: string): string[] {
-  return text
-    .split(/(?<=[다요까네죠][.!?])\s+/)
-    .map((s) => s.trim())
-    .filter(Boolean);
 }
 
 function formatDate(iso: string) {

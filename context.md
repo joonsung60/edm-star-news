@@ -104,6 +104,12 @@ RSS/URL로 수집된 원문 기사.
 - `image_url`
 - `source_id`
 - `published_at`
+- `suggestion_state`: 원문 기사의 처리 상태 및 라이프사이클
+  - `null` / `new`: 신규 수집되었거나, 제안/초안 단계에서 삭제(거절)되어 후보로 다시 돌아온 상태 (제안 및 인터뷰 발굴 대상)
+  - `suggested`: 자동 토픽 제안(클러스터)에 묶여 승인 대기 중인 상태
+  - `used`: 기사가 생성되고 최종적으로 '게시(publish)' 처리되어 소비가 완료된 상태
+  - `rejected`: 인터뷰 후보 등에서 사용자가 명시적으로 '기각'하여 버린 상태
+  - `ignored`: 어드민 제안 목록 등에서 사용자가 명시적으로 무시/숨김 처리하여 기사화 후보에서 제외된 상태
 
 ### `article_clusters` / `cluster_articles`
 

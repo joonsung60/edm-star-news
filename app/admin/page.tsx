@@ -933,6 +933,34 @@ function SuggestTab() {
     setIsBlocklistLoading(false)
   }
 
+  const handleIgnoreArticle = async (suggestionId: string, articleId: string) => {
+    try {
+      const res = await fetch('/api/suggest-clusters', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rawArticleId: articleId }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setSuggestions((prev) =>
+          prev.map((s) => {
+            if (s.id === suggestionId) {
+              return {
+                ...s,
+                articles: s.articles.filter((a) => a.id !== articleId),
+              }
+            }
+            return s
+          })
+        )
+      } else {
+        console.error('Ignore error:', data.error)
+      }
+    } catch (err) {
+      console.error('Ignore request failed:', err)
+    }
+  }
+
   const emptyMessage =
     subTab === 'pending'
       ? '대기 중인 제안이 없습니다. 위 버튼으로 새 제안을 받아보세요.'
@@ -1120,16 +1148,25 @@ function SuggestTab() {
                   </summary>
                   <ul className="mt-2 text-sm text-gray-600 space-y-1">
                     {s.articles.map((a) => (
-                      <li key={a.id} className="truncate">
-                        ・{' '}
-                        <a
-                          href={a.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="hover:underline"
+                      <li key={a.id} className="flex items-center justify-between gap-2">
+                        <span className="truncate">
+                          ・{' '}
+                          <a
+                            href={a.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="hover:underline"
+                          >
+                            {a.title}
+                          </a>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleIgnoreArticle(s.id, a.id)}
+                          className="shrink-0 text-xs text-gray-400 hover:text-red-500"
                         >
-                          {a.title}
-                        </a>
+                          ignore
+                        </button>
                       </li>
                     ))}
                   </ul>
