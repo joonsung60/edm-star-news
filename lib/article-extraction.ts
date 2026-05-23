@@ -51,7 +51,7 @@ function stripHtmlToText(html: string): string {
     .trim()
 }
 
-export function cleanArticleText(text: string, maxLength = 5000): string {
+export function cleanArticleText(text: string, maxLength = 10000): string {
   const stopIndex = STOP_SECTION_PATTERNS
     .map((pattern) => text.search(pattern))
     .filter((index) => index >= 0)

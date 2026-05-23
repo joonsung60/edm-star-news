@@ -49,6 +49,7 @@ function formatArticleMessage(title: unknown, content: unknown): string {
   return preview ? `${safeTitle}\n\n${preview}` : safeTitle;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function replyWithTopicCards(ctx: any, suggestions: any[]) {
   for (const s of suggestions) {
     const keywords = Array.isArray(s.keywords) ? s.keywords.join(", ") : s.keywords;

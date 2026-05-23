@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { triggerDeployHook } from '@/lib/deploy-hook'
 
 type ClusterArticleRow = {
   raw_article_id: string
@@ -69,18 +70,7 @@ export async function PATCH(
     }
   }
 
-  const deployHookUrl = process.env.CLOUDFLARE_DEPLOY_HOOK_URL
-  if (deployHookUrl) {
-    fetch(deployHookUrl, { method: 'POST' })
-      .then((res) => {
-        if (!res.ok) {
-          console.error('[publish] deploy hook returned', res.status, res.statusText)
-        }
-      })
-      .catch((err) => {
-        console.error('[publish] deploy hook failed:', err)
-      })
-  }
+  await triggerDeployHook()
 
   return NextResponse.json({ article: data })
 }

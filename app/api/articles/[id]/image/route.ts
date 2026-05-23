@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { triggerDeployHook } from '@/lib/deploy-hook'
 
 export const runtime = 'nodejs'
 
@@ -122,12 +123,7 @@ export async function PATCH(
   }
 
   if (existing.published) {
-    const deployHookUrl = process.env.CLOUDFLARE_DEPLOY_HOOK_URL
-    if (deployHookUrl) {
-      fetch(deployHookUrl, { method: 'POST' }).catch((err) => {
-        console.error('[article-image] deploy hook failed:', err)
-      })
-    }
+    await triggerDeployHook()
   }
 
   return NextResponse.json({ article })

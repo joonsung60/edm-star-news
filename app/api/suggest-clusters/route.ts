@@ -993,51 +993,70 @@ export async function POST(req: NextRequest) {
     const normalized: SuggestionWithArticles[] = []
     let llmSuggestionCount = 0
 
+    console.log(`[suggest-clusters] 배치 루프 시작: 총 ${batches.length}개 배치`)
+
     for (const [batchIndex, batch] of batches.entries()) {
-      const ollamaRes = await fetch(`${ollamaUrl}/api/generate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: suggestModel,
-          system: SUGGEST_SYSTEM,
-          prompt: buildClusterPrompt(batch),
-          format: SUGGEST_RESPONSE_FORMAT,
-          stream: false,
-        }),
-      })
+      console.log(`[batch ${batchIndex}] 시작 (기사 ${batch.length}개)`)
+
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 180000)
+
+      let ollamaRes: Response
+      try {
+        ollamaRes = await fetch(`${ollamaUrl}/api/generate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: suggestModel,
+            options: { num_ctx: 16384 },
+            system: SUGGEST_SYSTEM,
+            prompt: buildClusterPrompt(batch),
+            format: SUGGEST_RESPONSE_FORMAT,
+            stream: false,
+          }),
+          signal: controller.signal,
+        })
+      } catch (err: unknown) {
+        clearTimeout(timeoutId)
+        if (err instanceof Error && err.name === 'AbortError') {
+          console.log(`[batch ${batchIndex}] 타임아웃 - 건너뜀`)
+        } else {
+          console.error(`[batch ${batchIndex}] fetch 에러 - 건너뜀:`, String(err))
+        }
+        continue
+      }
+      clearTimeout(timeoutId)
 
       if (!ollamaRes.ok) {
-        return NextResponse.json(
-          { error: `Ollama 응답 오류: ${ollamaRes.status}`, batchIndex },
-          { status: 502 }
-        )
+        console.error(`[batch ${batchIndex}] Ollama 응답 오류: ${ollamaRes.status} - 건너뜀`)
+        continue
       }
 
       const ollamaData = await ollamaRes.json()
       const responseText: string = ollamaData.response ?? ''
+      console.log(`[batch ${batchIndex}] LLM response (first 300 chars): ${responseText.slice(0, 300)}`)
 
       let parsed: { suggestions?: Suggestion[] }
       try {
         parsed = parseSuggestions(responseText)
       } catch (err) {
-        return NextResponse.json(
-          { error: String(err), batchIndex, raw: responseText.slice(0, 500) },
-          { status: 502 }
-        )
+        console.error(`[batch ${batchIndex}] parseSuggestions 에러 - 건너뜀:`, String(err))
+        continue
       }
 
       const suggestions = parsed.suggestions ?? []
       llmSuggestionCount += suggestions.length
-      const batchValidIds = new Set(batch.map((a) => a.id))
+      
       normalized.push(
         ...suggestions
-          .map((s) => normalizeSuggestion(s, batchValidIds, articleMeta, batch))
+          .map((s) => normalizeSuggestion(s, validIds, articleMeta, rawArticles))
           .filter((s): s is SuggestionWithArticles => s !== null)
       )
+      console.log(`[batch ${batchIndex}] 종료: ${suggestions.length}개 제안 파싱 완료`)
     }
 
     console.log(
-      `[suggest-clusters] 배치 ${batches.length}개, LLM 제안: ${llmSuggestionCount}건,`
+      `[suggest-clusters] 배치 루프 종료, LLM 제안: ${llmSuggestionCount}건,`
       + ` 정규화 통과: ${normalized.length}건`
     )
 

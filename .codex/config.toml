@@ -1,0 +1,6 @@
+[mcp_servers.supabase]
+url = "https://mcp.supabase.com/mcp?project_ref=uawexfxpptgbvpnbdrl&read_only=true&features=database"
+enabled = true
+bearer_token_env_var = "SUPABASE_ACCESS_TOKEN"
+startup_timeout_sec = 30
+tool_timeout_sec = 120

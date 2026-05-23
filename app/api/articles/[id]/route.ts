@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { triggerDeployHook } from '@/lib/deploy-hook'
 
 function normalizeArticleInput(value: unknown): string {
   return typeof value === 'string' ? value.trim() : ''
@@ -92,18 +93,7 @@ export async function PATCH(
   }
 
   if (existing.published) {
-    const deployHookUrl = process.env.CLOUDFLARE_DEPLOY_HOOK_URL
-    if (deployHookUrl) {
-      fetch(deployHookUrl, { method: 'POST' })
-        .then((res) => {
-          if (!res.ok) {
-            console.error('[edit] deploy hook returned', res.status, res.statusText)
-          }
-        })
-        .catch((err) => {
-          console.error('[edit] deploy hook failed:', err)
-        })
-    }
+    await triggerDeployHook()
   }
 
   return NextResponse.json({ article: data })

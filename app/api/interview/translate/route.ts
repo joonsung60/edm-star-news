@@ -213,11 +213,17 @@ export async function POST(req: NextRequest) {
       throw new Error('원문 기사를 찾을 수 없습니다.')
     }
 
-    let content = article.content
-    if (!content) {
-      content = await fetchArticleContent(article.url)
+    let content = article.content || ''
+
+    // 4800자 이상이면 수집 단계에서 잘렸을 가능성이 높음 → 재fetch
+    if (!content || content.length >= 4800) {
+      const fresh = await fetchArticleContent(article.url)
+      if (fresh && fresh.length > content.length) {
+        content = fresh
+      }
     }
-    content = cleanArticleText(content || '', 20000)
+
+    content = cleanArticleText(content, 20000)
     content = cleanInterviewSourceText(content)
 
     // 단일 줄바꿈은 공백으로(원문이 줄 단위로 wrap된 경우), 단락 구분용 \n\n은 유지
