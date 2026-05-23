@@ -676,6 +676,8 @@ function SuggestTab() {
   const [blockReason, setBlockReason] = useState('')
   const [blockMessage, setBlockMessage] = useState('')
   const [isBlocklistLoading, setIsBlocklistLoading] = useState(false)
+  const [isExtendedGenerating, setIsExtendedGenerating] = useState(false)
+  const [extendedMessage, setExtendedMessage] = useState('')
 
   const load = useCallback(async (status: SubTab) => {
     setIsLoading(true)
@@ -768,6 +770,48 @@ function SuggestTab() {
       setError('오류가 발생했습니다.')
     }
     setIsGenerating(false)
+  }
+
+  const handleExtendedGenerate = async () => {
+    setIsExtendedGenerating(true)
+    setExtendedMessage('확장 제안 실행 중... 완료 후 목록을 새로고침하세요.')
+    const initialCount = suggestions.length
+
+    try {
+      await fetch('/api/suggest-clusters/extended', { method: 'POST' })
+
+      let polls = 0
+      const poll = async () => {
+        polls++
+        if (polls > 20) {
+          setIsExtendedGenerating(false)
+          setExtendedMessage('확장 제안 폴링 종료 (10분 경과).')
+          return
+        }
+
+        try {
+          const res = await fetch('/api/suggest-clusters?status=pending')
+          const data = await res.json()
+          const currentCount = data.suggestions?.length || 0
+
+          if (currentCount > initialCount) {
+            const added = currentCount - initialCount
+            setExtendedMessage(`${added}개 추가됨. 새로고침하세요.`)
+            setIsExtendedGenerating(false)
+            return
+          }
+        } catch (err) {
+          // ignore
+        }
+
+        setTimeout(poll, 30000)
+      }
+
+      setTimeout(poll, 30000)
+    } catch (err) {
+      setExtendedMessage('확장 제안 실행 중 오류가 발생했습니다.')
+      setIsExtendedGenerating(false)
+    }
   }
 
   const handleApprove = async (s: PersistedSuggestion) => {
@@ -1051,12 +1095,20 @@ function SuggestTab() {
       <div className="mb-6 flex flex-wrap items-center gap-3">
         <button
           onClick={handleGenerate}
-          disabled={isGenerating}
+          disabled={isGenerating || isExtendedGenerating}
           className="px-6 py-3 bg-black text-white rounded font-semibold disabled:opacity-50"
         >
           {isGenerating ? '분석 중...' : '토픽 제안 받기'}
         </button>
+        <button
+          onClick={handleExtendedGenerate}
+          disabled={isGenerating || isExtendedGenerating}
+          className="px-6 py-3 border border-gray-300 text-gray-700 rounded font-semibold hover:bg-gray-50 disabled:opacity-50"
+        >
+          {isExtendedGenerating ? '실행 중...' : '토픽 확장 제안'}
+        </button>
         {lastGenSummary && <p className="text-sm text-gray-500">{lastGenSummary}</p>}
+        {extendedMessage && <p className="text-sm text-blue-600">{extendedMessage}</p>}
       </div>
 
       <div className="flex gap-2 mb-4 border-b text-sm">

@@ -95,6 +95,7 @@ bot.command("start", async (ctx) => {
     "EDM Star News 봇입니다.\n\n" +
     "/collect - RSS 수집\n" +
     "/suggest - 토픽 제안\n" +
+    "/suggest2 - 토픽 확장 제안\n" +
     "/topics - 제안된 토픽 목록\n" +
     "/articles - 기사 초안 목록"
   );
@@ -344,6 +345,35 @@ bot.callbackQuery(/^publish:(.+)$/, async (ctx) => {
 
 // 삭제 버튼
 bot.callbackQuery(/^delete:(.+)$/, async (ctx) => {
+  const id = ctx.match[1];
+  await ctx.answerCallbackQuery();
+  try {
+    await fetch(`${LOCAL_API}/api/articles/${id}`, { method: "DELETE" });
+    await ctx.editMessageReplyMarkup({ reply_markup: new InlineKeyboard() });
+    await ctx.reply("삭제 완료");
+  } catch (e) {
+    await ctx.reply(`오류 발생: ${e}`);
+  }
+});
+
+async function main() {
+  try {
+    const me = await bot.api.getMe();
+    console.log(`Telegram bot token 확인됨: @${me.username}`);
+
+    await bot.start({
+      onStart: (botInfo) => {
+        console.log(`EDM Star News 봇 시작됨: @${botInfo.username}`);
+      },
+    });
+  } catch (e) {
+    console.error("Telegram bot 시작 실패:", e);
+    process.exit(1);
+  }
+}
+
+void main();
+y(/^delete:(.+)$/, async (ctx) => {
   const id = ctx.match[1];
   await ctx.answerCallbackQuery();
   try {
