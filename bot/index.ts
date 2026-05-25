@@ -146,6 +146,30 @@ bot.command("suggest", async (ctx) => {
   }
 });
 
+// /suggest2
+bot.command("suggest2", async (ctx) => {
+  console.log("/suggest2 진입:", ctx.from?.id);
+  const msg = await ctx.reply("토픽 확장 제안 시작 중...");
+  try {
+    const res = await fetch(`${LOCAL_API}/api/suggest-clusters/extended`, {
+      method: "POST",
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.error) {
+      throw new Error(`토픽 확장 제안 실패 (status ${res.status}): ${data.error ?? res.statusText}`);
+    }
+
+    await ctx.api.editMessageText(
+      ctx.chat.id,
+      msg.message_id,
+      "토픽 확장 제안을 시작했습니다.\n완료 후 /topics로 제안 목록을 확인하세요."
+    );
+  } catch (e) {
+    console.error("토픽 확장 제안 실패:", e);
+    await ctx.api.editMessageText(ctx.chat.id, msg.message_id, `오류 발생: ${e}`);
+  }
+});
+
 // /topics
 bot.command("topics", async (ctx) => {
   console.log("/topics 진입:", ctx.from?.id);
@@ -345,35 +369,6 @@ bot.callbackQuery(/^publish:(.+)$/, async (ctx) => {
 
 // 삭제 버튼
 bot.callbackQuery(/^delete:(.+)$/, async (ctx) => {
-  const id = ctx.match[1];
-  await ctx.answerCallbackQuery();
-  try {
-    await fetch(`${LOCAL_API}/api/articles/${id}`, { method: "DELETE" });
-    await ctx.editMessageReplyMarkup({ reply_markup: new InlineKeyboard() });
-    await ctx.reply("삭제 완료");
-  } catch (e) {
-    await ctx.reply(`오류 발생: ${e}`);
-  }
-});
-
-async function main() {
-  try {
-    const me = await bot.api.getMe();
-    console.log(`Telegram bot token 확인됨: @${me.username}`);
-
-    await bot.start({
-      onStart: (botInfo) => {
-        console.log(`EDM Star News 봇 시작됨: @${botInfo.username}`);
-      },
-    });
-  } catch (e) {
-    console.error("Telegram bot 시작 실패:", e);
-    process.exit(1);
-  }
-}
-
-void main();
-y(/^delete:(.+)$/, async (ctx) => {
   const id = ctx.match[1];
   await ctx.answerCallbackQuery();
   try {
