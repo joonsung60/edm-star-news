@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { isUsableImageUrl, loadClusterImageUrl } from "@/lib/articles";
+import { isUsableImageUrl, loadClusterImageUrl, loadPublishedArticles } from "@/lib/articles";
+import { ArticleCard } from "@/components/ArticleCard";
 
 // ── 원본 유지 — 데이터/유틸 ───────────────────────────
 
@@ -224,6 +225,14 @@ export default async function ArticlePage({
     article.updated_at &&
     article.updated_at !== article.published_at;
 
+  const { articles: latestArticles } = await loadPublishedArticles({
+    category: article.category ?? undefined,
+    limit: 10,
+  });
+  const relatedArticles = latestArticles
+    .filter((a) => a.id !== article.id)
+    .slice(0, 3);
+
   return (
     <div className="max-w-[1280px] mx-auto px-4 md:px-6 lg:px-8 py-8 md:py-12">
       <BackLink />
@@ -310,6 +319,23 @@ export default async function ArticlePage({
           <BackLink />
         </div>
       </article>
+
+      {/* 관련 기사 */}
+      {relatedArticles.length > 0 && (
+        <section className="mt-16 pt-12 border-t border-gray-200 max-w-[1280px]">
+          <h2
+            className="text-sm font-bold tracking-[0.2em] uppercase mb-8"
+            style={{ fontFamily: "var(--font-display), sans-serif" }}
+          >
+            관련 기사
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-10">
+            {relatedArticles.map((a) => (
+              <ArticleCard key={a.id} article={a} />
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

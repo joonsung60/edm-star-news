@@ -1,8 +1,8 @@
 import { supabase } from '@/lib/supabase'
 
-export async function triggerDeployHook() {
+export async function triggerDeployHook(): Promise<{ success: boolean; cooldown?: boolean }> {
   const deployHookUrl = process.env.CLOUDFLARE_DEPLOY_HOOK_URL
-  if (!deployHookUrl) return
+  if (!deployHookUrl) return { success: false }
 
   try {
     const { data, error } = await supabase
@@ -26,6 +26,7 @@ export async function triggerDeployHook() {
       if (diffMins < 3) {
         shouldSend = false
         console.log(`[deploy-hook] skipped. Last sent ${diffMins.toFixed(1)} mins ago.`)
+        return { success: false, cooldown: true }
       }
     }
 
@@ -45,11 +46,16 @@ export async function triggerDeployHook() {
       const res = await fetch(deployHookUrl, { method: 'POST' })
       if (!res.ok) {
         console.error('[deploy-hook] returned', res.status, res.statusText)
+        return { success: false }
       } else {
         console.log('[deploy-hook] triggered successfully.')
+        return { success: true }
       }
     }
+    
+    return { success: false }
   } catch (err) {
     console.error('[deploy-hook] error:', err)
+    return { success: false }
   }
 }

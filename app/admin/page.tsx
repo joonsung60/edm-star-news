@@ -814,6 +814,28 @@ function SuggestTab() {
     }
   }
 
+  const handleDeleteAllPending = async () => {
+    const ok = window.confirm(`pending 상태 토픽 제안 ${suggestions.length}개를 모두 삭제하시겠습니까?`)
+    if (!ok) return
+
+    setIsGenerating(true)
+    setError('')
+    try {
+      const res = await fetch('/api/suggest-clusters?status=pending', {
+        method: 'DELETE'
+      })
+      const data = await res.json()
+      if (data.error) {
+        setError(data.error)
+      } else {
+        await load('pending')
+      }
+    } catch {
+      setError('삭제 중 오류가 발생했습니다.')
+    }
+    setIsGenerating(false)
+  }
+
   const handleApprove = async (s: PersistedSuggestion) => {
     setProcessing(s.id)
     setResults((r) => ({ ...r, [s.id]: { state: 'pending', message: '승인 처리 중...' } }))
@@ -1111,24 +1133,35 @@ function SuggestTab() {
         {extendedMessage && <p className="text-sm text-blue-600">{extendedMessage}</p>}
       </div>
 
-      <div className="flex gap-2 mb-4 border-b text-sm">
-        {[
-          { id: 'pending', label: '미처리' },
-          { id: 'published', label: '기사 생성 완료' },
-          { id: 'rejected', label: '거절됨' },
-        ].map((tab) => (
+      <div className="flex items-center justify-between mb-4 border-b">
+        <div className="flex gap-2 text-sm">
+          {[
+            { id: 'pending', label: '미처리' },
+            { id: 'published', label: '기사 생성 완료' },
+            { id: 'rejected', label: '거절됨' },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setSubTab(tab.id as SubTab)}
+              className={`px-3 py-2 font-medium border-b-2 transition-colors ${
+                subTab === tab.id
+                  ? 'border-black text-black'
+                  : 'border-transparent text-gray-400 hover:text-gray-600'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+        {subTab === 'pending' && suggestions.length > 0 && (
           <button
-            key={tab.id}
-            onClick={() => setSubTab(tab.id as SubTab)}
-            className={`px-3 py-2 font-medium border-b-2 transition-colors ${
-              subTab === tab.id
-                ? 'border-black text-black'
-                : 'border-transparent text-gray-400 hover:text-gray-600'
-            }`}
+            onClick={handleDeleteAllPending}
+            disabled={isGenerating || isExtendedGenerating}
+            className="px-3 py-1 mb-1 text-sm text-red-600 border border-red-300 rounded hover:bg-red-50 disabled:opacity-50"
           >
-            {tab.label}
+            pending 전체 삭제
           </button>
-        ))}
+        )}
       </div>
 
       {error && <p className="text-red-500 mb-4">{error}</p>}
@@ -1819,16 +1852,12 @@ function InterviewDiscoveryTab() {
     setIsLoading(true)
     setError('')
     try {
-      const { data, error: fetchError } = await supabase
-        .from('raw_articles')
-        .select('id, title, url, published_at')
-        .or('suggestion_state.is.null,suggestion_state.eq.new')
-        .or('url.ilike.%/interview/%,url.ilike.%/feature/%,url.ilike.%/talks/%,title.ilike.%interview%,title.ilike.%in conversation%,title.ilike.%talks to%,title.ilike.%speaks to%,title.ilike.%catches up%')
-        .order('published_at', { ascending: false, nullsFirst: false })
-        .limit(50)
-
-      if (fetchError) throw fetchError
-      setCandidates((data as InterviewCandidate[]) || [])
+      const res = await fetch('/api/interview/discover', { method: 'POST' })
+      const data = await res.json()
+      if (!data.success) {
+        throw new Error(data.error ?? '인터뷰 후보 발굴에 실패했습니다.')
+      }
+      setCandidates((data.candidates ?? []) as InterviewCandidate[])
     } catch (err) {
       setError(String(err))
     }
@@ -1938,4 +1967,3 @@ function InterviewDiscoveryTab() {
     </div>
   )
 }
-

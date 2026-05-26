@@ -5,6 +5,18 @@ import displayNames from '@/lib/display-names.json'
 import { SYSTEM_PROMPT_A } from '@/lib/prompts'
 import { findGenre } from '@/lib/taxonomy'
 
+const ARTICLE_RESPONSE_FORMAT = {
+  type: 'object',
+  properties: {
+    title: { type: 'string' },
+    content: { type: 'string' },
+    slug: { type: 'string' },
+    category: { type: 'string' },
+    genre: { type: 'string' },
+  },
+  required: ['title', 'content', 'slug', 'category', 'genre'],
+}
+
 const displayNameRules = Object.entries(displayNames as Record<string, string>)
   .map(([en, ko]) => `- ${en} → ${ko}`)
   .join('\n')
@@ -334,6 +346,7 @@ ${articlesText}
 
 [JSON 출력 형식]
 {"title":"한국어 기사 제목","content":"한국어 기사 본문","slug":"english-keyword-slug-2026","category":"릴리즈","genre":"house"}`,
+        format: ARTICLE_RESPONSE_FORMAT,
         stream: false,
         think: false,
       }),

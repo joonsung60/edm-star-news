@@ -92,7 +92,7 @@ export async function PATCH(
 
     if (nextStatus === 'rejected' && body.hideRawArticles === true) {
       rawArticleUpdateError = await updateRawArticleSuggestionState(articleIds, {
-        suggestion_state: 'new',
+        suggestion_state: 'ignored',
         suggestion_rejected_at: now,
       })
     }

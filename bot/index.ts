@@ -97,8 +97,54 @@ bot.command("start", async (ctx) => {
     "/suggest - 토픽 제안\n" +
     "/suggest2 - 토픽 확장 제안\n" +
     "/topics - 제안된 토픽 목록\n" +
-    "/articles - 기사 초안 목록"
+    "/clear_topics - pending 토픽 제안 전체 삭제\n" +
+    "/articles - 기사 초안 목록\n" +
+    "/deploy - 사이트 배포 트리거"
   );
+});
+
+// /clear_topics
+bot.command("clear_topics", async (ctx) => {
+  console.log("/clear_topics 진입:", ctx.from?.id);
+  const msg = await ctx.reply("pending 토픽 제안 삭제 중...");
+  try {
+    const getRes = await fetch(`${LOCAL_API}/api/suggest-clusters?status=pending`);
+    const getData = await getRes.json().catch(() => ({}));
+    const count = getData.suggestions?.length || 0;
+
+    const res = await fetch(`${LOCAL_API}/api/suggest-clusters?status=pending`, { method: "DELETE" });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.error) {
+      throw new Error(`삭제 실패 (status ${res.status}): ${data.error ?? res.statusText}`);
+    }
+    await ctx.api.editMessageText(ctx.chat.id, msg.message_id, `pending 토픽 제안 ${count}개 삭제 완료`);
+  } catch (e) {
+    console.error("pending 토픽 제안 삭제 실패:", e);
+    await ctx.api.editMessageText(ctx.chat.id, msg.message_id, `오류 발생: ${e}`);
+  }
+});
+
+// /deploy
+bot.command("deploy", async (ctx) => {
+  console.log("/deploy 진입:", ctx.from?.id);
+  const msg = await ctx.reply("배포 트리거 요청 중...");
+  try {
+    const res = await fetch(`${LOCAL_API}/api/deploy`, { method: "POST" });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.error) {
+      throw new Error(`배포 트리거 실패 (status ${res.status}): ${data.error ?? res.statusText}`);
+    }
+    if (data.cooldown) {
+      await ctx.api.editMessageText(ctx.chat.id, msg.message_id, "쿨다운 중입니다. 잠시 후 다시 시도해주세요.");
+    } else if (data.success) {
+      await ctx.api.editMessageText(ctx.chat.id, msg.message_id, "배포 트리거 완료");
+    } else {
+      await ctx.api.editMessageText(ctx.chat.id, msg.message_id, "배포 트리거에 실패했습니다.");
+    }
+  } catch (e) {
+    console.error("배포 트리거 실패:", e);
+    await ctx.api.editMessageText(ctx.chat.id, msg.message_id, `오류 발생: ${e}`);
+  }
 });
 
 // /collect
@@ -384,6 +430,16 @@ async function main() {
   try {
     const me = await bot.api.getMe();
     console.log(`Telegram bot token 확인됨: @${me.username}`);
+
+    await bot.api.setMyCommands([
+      { command: "collect", description: "RSS 수집" },
+      { command: "suggest", description: "토픽 제안" },
+      { command: "suggest2", description: "토픽 확장 제안" },
+      { command: "topics", description: "제안된 토픽 목록" },
+      { command: "clear_topics", description: "pending 토픽 제안 전체 삭제" },
+      { command: "articles", description: "기사 초안 목록" },
+      { command: "deploy", description: "사이트 배포 트리거" },
+    ]);
 
     await bot.start({
       onStart: (botInfo) => {

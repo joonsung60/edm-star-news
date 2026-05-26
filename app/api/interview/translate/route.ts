@@ -360,6 +360,14 @@ ${content}
 
     if (insertError) throw insertError
 
+    await supabase
+      .from('raw_articles')
+      .update({
+        suggestion_state: 'used',
+        suggestion_used_at: new Date().toISOString(),
+      })
+      .eq('id', raw_article_id)
+
     return NextResponse.json({ success: true, article: savedArticle })
 
   } catch (err) {

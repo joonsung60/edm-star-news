@@ -382,3 +382,29 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: String(err) }, { status: 500 })
   }
 }
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const status = req.nextUrl.searchParams.get('status')
+
+    if (status !== 'pending') {
+      return NextResponse.json(
+        { error: 'status=pending 파라미터가 필요하며, 다른 상태는 전체 삭제할 수 없습니다.' },
+        { status: 400 }
+      )
+    }
+
+    const { error } = await supabase
+      .from('suggested_clusters')
+      .delete()
+      .eq('status', 'pending')
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (err) {
+    return NextResponse.json({ error: String(err) }, { status: 500 })
+  }
+}
