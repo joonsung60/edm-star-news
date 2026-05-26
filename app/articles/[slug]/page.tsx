@@ -225,13 +225,16 @@ export default async function ArticlePage({
     article.updated_at &&
     article.updated_at !== article.published_at;
 
-  const { articles: latestArticles } = await loadPublishedArticles({
-    category: article.category ?? undefined,
-    limit: 10,
-  });
-  const relatedArticles = latestArticles
-    .filter((a) => a.id !== article.id)
-    .slice(0, 3);
+  const relatedArticles = article.category
+    ? (
+        await loadPublishedArticles({
+          category: article.category,
+          limit: 10,
+        })
+      ).articles
+        .filter((a) => a.id !== article.id)
+        .slice(0, 3)
+    : [];
 
   return (
     <div className="max-w-[1280px] mx-auto px-4 md:px-6 lg:px-8 py-8 md:py-12">

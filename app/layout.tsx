@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Script from "next/script";
 import { Barlow_Condensed, Noto_Sans_KR } from "next/font/google";
 import { CATEGORY_NAV, RELEASE_GENRE_NAV } from "@/lib/taxonomy";
 import "./globals.css";
+
+const GA_MEASUREMENT_ID = "G-BY0W2KDPZ1";
 
 const barlowCondensed = Barlow_Condensed({
   weight: ["700", "900"],
@@ -50,6 +53,19 @@ export default function RootLayout({
         className="min-h-full flex flex-col bg-white text-[#0A0A0A]"
         style={{ fontFamily: "var(--font-body), sans-serif" }}
       >
+        <Script
+          src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', '${GA_MEASUREMENT_ID}');
+          `}
+        </Script>
+
         {/* ── 헤더 ── */}
         <header className="border-b border-gray-200 bg-white sticky top-0 z-50">
           <div className="max-w-[1280px] mx-auto px-4 md:px-6 lg:px-8">
