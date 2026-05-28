@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabase'
 
 type AdminGroup = 'rss' | 'image' | 'interview'
 type RssTab = 'collect' | 'add-urls' | 'suggest' | 'articles' | 'cluster' | 'generate'
-type ImageTab = 'image-source' | 'image-articles'
+type ImageTab = 'image-source' | 'text-source' | 'image-articles'
 type InterviewTab = 'discovery' | 'review'
 
 const RSS_TABS: { id: RssTab; label: string }[] = [
@@ -21,6 +21,7 @@ const RSS_TABS: { id: RssTab; label: string }[] = [
 
 const IMAGE_TABS: { id: ImageTab; label: string }[] = [
   { id: 'image-source', label: '이미지 소스 추가' },
+  { id: 'text-source', label: '텍스트 소스 추가' },
   { id: 'image-articles', label: '생성 기사 검토' },
 ]
 
@@ -28,6 +29,38 @@ const INTERVIEW_TABS: { id: InterviewTab; label: string }[] = [
   { id: 'discovery', label: '인터뷰 후보 발굴' },
   { id: 'review', label: '생성 기사 검토' },
 ]
+
+type JobPollResult = {
+  status: string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  result: any
+  error_message: string | null
+}
+
+async function pollJobStatus(jobId: string): Promise<JobPollResult> {
+  const POLL_INTERVAL_MS = 3000
+  const TIMEOUT_MS = 300_000
+  const deadline = Date.now() + TIMEOUT_MS
+
+  while (Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS))
+    try {
+      const res = await fetch(`/api/jobs?id=${encodeURIComponent(jobId)}`)
+      const data = await res.json().catch(() => ({}))
+      if (data?.status === 'done' || data?.status === 'failed') {
+        return {
+          status: data.status,
+          result: data.result ?? null,
+          error_message: data.error_message ?? null,
+        }
+      }
+    } catch {
+      // 일시적 오류는 무시하고 다음 폴링까지 대기
+    }
+  }
+
+  return { status: 'timeout', result: null, error_message: '시간 초과' }
+}
 
 export default function AdminPage() {
   const [activeGroup, setActiveGroup] = useState<AdminGroup>('rss')
@@ -94,6 +127,7 @@ export default function AdminPage() {
       {activeGroup === 'rss' && activeRssTab === 'generate' && <GenerateTab />}
 
       {activeGroup === 'image' && activeImageTab === 'image-source' && <ImageSourceTab />}
+      {activeGroup === 'image' && activeImageTab === 'text-source' && <TextSourceTab />}
       {activeGroup === 'image' && activeImageTab === 'image-articles' && <ArticlesReviewTab />}
 
       {activeGroup === 'interview' && activeInterviewTab === 'discovery' && <InterviewDiscoveryTab />}
@@ -668,9 +702,26 @@ function SuggestTab() {
   const [isLoading, setIsLoading] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState('')
-  const [processing, setProcessing] = useState<string | null>(null)
+  const [processingIds, setProcessingIds] = useState<Set<string>>(() => new Set())
   const [results, setResults] = useState<Record<string, ProcessingState>>({})
   const [lastGenSummary, setLastGenSummary] = useState('')
+
+  const startProcessing = (id: string) => {
+    setProcessingIds((prev) => {
+      const next = new Set(prev)
+      next.add(id)
+      return next
+    })
+  }
+
+  const stopProcessing = (id: string) => {
+    setProcessingIds((prev) => {
+      if (!prev.has(id)) return prev
+      const next = new Set(prev)
+      next.delete(id)
+      return next
+    })
+  }
   const [blockRules, setBlockRules] = useState<TopicBlockRule[]>([])
   const [blockPattern, setBlockPattern] = useState('')
   const [blockReason, setBlockReason] = useState('')
@@ -824,12 +875,18 @@ function SuggestTab() {
       const res = await fetch('/api/suggest-clusters?status=pending', {
         method: 'DELETE'
       })
-      const data = await res.json()
-      if (data.error) {
-        setError(data.error)
-      } else {
+      const text = await res.text()
+      const data = text ? JSON.parse(text) : {}
+      if (!res.ok || data.error) {
+        setError(data.error ?? `삭제 실패: HTTP ${res.status}`)
         await load('pending')
+        return
       }
+      setSuggestions([])
+      if (data.rawArticleResetError) {
+        setError(`pending은 삭제됐지만 raw 기사 초기화 실패: ${data.rawArticleResetError}`)
+      }
+      await load('pending')
     } catch {
       setError('삭제 중 오류가 발생했습니다.')
     }
@@ -837,81 +894,53 @@ function SuggestTab() {
   }
 
   const handleApprove = async (s: PersistedSuggestion) => {
-    setProcessing(s.id)
-    setResults((r) => ({ ...r, [s.id]: { state: 'pending', message: '승인 처리 중...' } }))
+    startProcessing(s.id)
+    setResults((r) => ({ ...r, [s.id]: { state: 'pending', message: '잡 등록 중...' } }))
 
     try {
-      const approveRes = await patchStatus(s.id, { status: 'approved' })
-      if (approveRes.error) {
-        setResults((r) => ({ ...r, [s.id]: { state: 'error', message: approveRes.error } }))
-        setProcessing(null)
-        return
-      }
-
-      setResults((r) => ({ ...r, [s.id]: { state: 'pending', message: '클러스터 생성 중...' } }))
-
-      const clusterRes = await fetch('/api/cluster', {
+      const jobRes = await fetch('/api/jobs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          topic: s.topic,
-          keywords: s.keywords,
-          articleIds: s.articleIds,
+          job_type: 'generate_from_suggestion',
+          payload: { suggestionId: s.id },
         }),
       })
-      const clusterData = await clusterRes.json()
-      if (!clusterData.success) {
-        await patchStatus(s.id, { status: 'pending' })
+      const jobData = await jobRes.json()
+      if (!jobRes.ok || jobData.error || !jobData.jobId) {
         setResults((r) => ({
           ...r,
-          [s.id]: { state: 'error', message: clusterData.error ?? '클러스터 생성 실패' },
+          [s.id]: { state: 'error', message: jobData.error ?? '잡 등록 실패' },
         }))
-        setProcessing(null)
+        stopProcessing(s.id)
         return
       }
 
-      setResults((r) => ({
-        ...r,
-        [s.id]: {
-          state: 'pending',
-          message: `클러스터 생성됨 (${clusterData.matched}개 매칭). 기사 생성 중...`,
-        },
-      }))
+      setResults((r) => ({ ...r, [s.id]: { state: 'pending', message: '기사 생성 중...' } }))
 
-      const genRes = await fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ clusterIds: [clusterData.clusterId] }),
-      })
-      const genData = await genRes.json()
-      const result = genData.results?.[0] as GenerateResult | undefined
-
-      if (result?.success) {
-        await patchStatus(s.id, {
-          status: 'published',
-          clusterId: clusterData.clusterId,
-        })
+      const poll = await pollJobStatus(jobData.jobId)
+      if (poll.status === 'done') {
+        const articleTitle =
+          (Array.isArray(poll.result) ? poll.result[0]?.article?.title : poll.result?.article?.title) ?? ''
         setResults((r) => ({
           ...r,
-          [s.id]: { state: 'success', message: `완료: ${result.article?.title ?? ''}` },
+          [s.id]: { state: 'success', message: `완료: ${articleTitle}` },
         }))
         await load(subTab)
       } else {
-        await patchStatus(s.id, { status: 'pending' })
         setResults((r) => ({
           ...r,
-          [s.id]: { state: 'error', message: result?.error ?? '기사 생성 실패' },
+          [s.id]: { state: 'error', message: poll.error_message ?? '기사 생성 실패' },
         }))
       }
     } catch (err) {
-      await patchStatus(s.id, { status: 'pending' }).catch(() => undefined)
       setResults((r) => ({ ...r, [s.id]: { state: 'error', message: String(err) } }))
     }
-    setProcessing(null)
+    stopProcessing(s.id)
   }
 
   const handleReject = async (s: PersistedSuggestion) => {
-    setProcessing(s.id)
+    startProcessing(s.id)
     try {
       const data = await patchStatus(s.id, { status: 'rejected', hideRawArticles: true })
       if (data.error) {
@@ -922,7 +951,7 @@ function SuggestTab() {
     } catch (err) {
       setResults((r) => ({ ...r, [s.id]: { state: 'error', message: String(err) } }))
     }
-    setProcessing(null)
+    stopProcessing(s.id)
   }
 
   const handleAddBlockRule = async () => {
@@ -1176,7 +1205,7 @@ function SuggestTab() {
         <div className="space-y-4">
           {suggestions.map((s) => {
             const result = results[s.id]
-            const isProcessing = processing === s.id
+            const isProcessing = processingIds.has(s.id)
             return (
               <div key={s.id} className="border rounded p-4">
                 <div className="flex items-start justify-between gap-4 mb-3">
@@ -1203,14 +1232,14 @@ function SuggestTab() {
                     <div className="flex gap-2 whitespace-nowrap">
                       <button
                         onClick={() => handleApprove(s)}
-                        disabled={processing !== null}
+                        disabled={isProcessing}
                         className="px-3 py-2 bg-black text-white text-sm rounded font-semibold disabled:opacity-50"
                       >
                         {isProcessing ? '처리 중...' : '승인 & 기사 생성'}
                       </button>
                       <button
                         onClick={() => handleReject(s)}
-                        disabled={processing !== null}
+                        disabled={isProcessing}
                         className="px-3 py-2 border border-gray-300 text-gray-600 text-sm rounded font-semibold hover:bg-gray-50 disabled:opacity-50"
                       >
                         거절
@@ -1785,7 +1814,19 @@ function GenerateTab() {
         body: JSON.stringify({ clusterIds: [clusterId] }),
       })
       const data = await res.json()
-      setResult(data.results[0])
+      if (!res.ok || data.error || !data.jobId) {
+        setResult({ success: false, error: data.error ?? '잡 등록 실패' })
+        setIsLoading(false)
+        return
+      }
+
+      const poll = await pollJobStatus(data.jobId)
+      if (poll.status === 'done') {
+        const first = Array.isArray(poll.result) ? poll.result[0] : poll.result
+        setResult((first ?? { success: false, error: '결과 없음' }) as GenerateResult)
+      } else {
+        setResult({ success: false, error: poll.error_message ?? '기사 생성 실패' })
+      }
     } catch {
       setResult({ success: false, error: '오류가 발생했습니다.' })
     }
@@ -1964,6 +2005,184 @@ function InterviewDiscoveryTab() {
           })}
         </div>
       )}
+    </div>
+  )
+}
+
+function TextSourceTab() {
+  const [rawText, setRawText] = useState('')
+  const [sourceMemo, setSourceMemo] = useState('')
+  const [sourceUrl, setSourceUrl] = useState('')
+  const [sourceDate, setSourceDate] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [savedSourceId, setSavedSourceId] = useState<string | null>(null)
+  const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
+
+  const handleSave = async () => {
+    if (!rawText.trim() || !sourceMemo.trim()) {
+      setError('텍스트 원문과 소스 메모를 모두 입력하세요.')
+      return
+    }
+
+    setIsSaving(true)
+    setError('')
+    setMessage('')
+    setSavedSourceId(null)
+
+    try {
+      const res = await fetch('/api/text-sources', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          raw_text: rawText,
+          source_memo: sourceMemo,
+          source_url: sourceUrl,
+          source_date: sourceDate,
+        }),
+      })
+      const data = await res.json()
+
+      if (data.error) {
+        setError(data.error)
+      } else {
+        setSavedSourceId(data.textSource.id)
+        setMessage('텍스트 소스가 저장되었습니다. 기사 초안을 생성할 수 있습니다.')
+      }
+    } catch (err) {
+      setError(String(err))
+    }
+
+    setIsSaving(false)
+  }
+
+  const handleGenerate = async () => {
+    if (!savedSourceId) return
+
+    setIsGenerating(true)
+    setError('')
+    setMessage('')
+
+    try {
+      const res = await fetch(`/api/text-sources/${savedSourceId}/generate`, {
+        method: 'POST',
+      })
+      const data = await res.json()
+
+      if (!res.ok || data.error || !data.jobId) {
+        setError(data.error ?? '잡 등록 실패')
+        setIsGenerating(false)
+        return
+      }
+
+      setMessage('기사 생성 중...')
+      const poll = await pollJobStatus(data.jobId)
+      if (poll.status === 'done') {
+        setMessage(`기사 생성 완료: ${poll.result?.article?.title ?? ''}`)
+        setSavedSourceId(null)
+        setRawText('')
+        setSourceMemo('')
+        setSourceUrl('')
+        setSourceDate('')
+      } else {
+        setError(poll.error_message ?? '기사 생성 실패')
+        setMessage('')
+      }
+    } catch (err) {
+      setError(String(err))
+    }
+
+    setIsGenerating(false)
+  }
+
+  return (
+    <div>
+      <p className="text-gray-600 mb-6">
+        유튜브 트랜스크립트나 인터뷰 원문 등 긴 텍스트를 입력하면 LLM이 분석하여 한국어 EDM 기사 초안을 생성합니다.
+      </p>
+
+      <div className="space-y-5 rounded border p-5">
+        <div>
+          <label className="mb-2 block text-sm font-semibold text-gray-800">
+            텍스트 원문
+            <span className="ml-1 text-red-500">*</span>
+          </label>
+          <textarea
+            value={rawText}
+            onChange={(e) => setRawText(e.target.value)}
+            className="h-48 w-full rounded border p-3 text-sm font-mono"
+            placeholder="유튜브 트랜스크립트, 인터뷰 원문 등"
+          />
+        </div>
+
+        <div>
+          <label className="mb-2 block text-sm font-semibold text-gray-800">
+            맥락 메모
+            <span className="ml-1 text-red-500">*</span>
+          </label>
+          <textarea
+            value={sourceMemo}
+            onChange={(e) => setSourceMemo(e.target.value)}
+            className="h-20 w-full rounded border p-3 text-sm"
+            placeholder="예: Suzanne Ciani 인터뷰 - YouTube Live Art Exchange, 2026.05"
+          />
+        </div>
+
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-gray-800">
+              출처 URL
+              <span className="ml-1 font-normal text-gray-400">(선택)</span>
+            </label>
+            <input
+              type="url"
+              value={sourceUrl}
+              onChange={(e) => setSourceUrl(e.target.value)}
+              className="w-full rounded border p-3 text-sm"
+              placeholder="https://youtube.com/..."
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-gray-800">
+              날짜
+              <span className="ml-1 font-normal text-gray-400">(선택)</span>
+            </label>
+            <input
+              type="date"
+              value={sourceDate}
+              onChange={(e) => setSourceDate(e.target.value)}
+              className="w-full rounded border p-3 text-sm"
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={isSaving || isGenerating || !rawText.trim() || !sourceMemo.trim()}
+            className="px-6 py-3 bg-black text-white rounded font-semibold disabled:opacity-50"
+          >
+            {isSaving ? '저장 중...' : '저장'}
+          </button>
+          
+          {savedSourceId && (
+            <button
+              type="button"
+              onClick={handleGenerate}
+              disabled={isGenerating || isSaving}
+              className="px-6 py-3 border border-gray-300 text-gray-700 rounded font-semibold hover:bg-gray-50 disabled:opacity-50"
+            >
+              {isGenerating ? '처리 중...' : '기사 초안 생성'}
+            </button>
+          )}
+        </div>
+
+        {message && <p className="text-green-600">{message}</p>}
+        {error && <p className="text-red-500">{error}</p>}
+      </div>
     </div>
   )
 }

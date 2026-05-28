@@ -394,6 +394,20 @@ export async function DELETE(req: NextRequest) {
       )
     }
 
+    const { data: pendingRows, error: fetchError } = await supabase
+      .from('suggested_clusters')
+      .select('id, article_ids')
+      .eq('status', 'pending')
+
+    if (fetchError) {
+      return NextResponse.json({ error: fetchError.message }, { status: 500 })
+    }
+
+    const rawArticleIds = Array.from(new Set(
+      ((pendingRows ?? []) as { article_ids: string[] | null }[])
+        .flatMap((row) => row.article_ids ?? [])
+    ))
+
     const { error } = await supabase
       .from('suggested_clusters')
       .delete()
@@ -403,7 +417,28 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json({ success: true })
+    let rawArticleResetError: string | null = null
+    if (rawArticleIds.length > 0) {
+      const { error: rawUpdateError } = await supabase
+        .from('raw_articles')
+        .update({
+          suggestion_state: 'new',
+          suggestion_last_checked_at: null,
+        })
+        .in('id', rawArticleIds)
+
+      if (rawUpdateError) {
+        rawArticleResetError = rawUpdateError.message
+        console.error('[suggest-clusters] pending 삭제 후 raw_articles 초기화 실패:', rawUpdateError.message)
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      deleted: pendingRows?.length ?? 0,
+      resetRawArticles: rawArticleIds.length,
+      rawArticleResetError,
+    })
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 })
   }

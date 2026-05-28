@@ -1,5 +1,5 @@
 {
-  "name": "bot",
+  "name": "worker",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -13,8 +13,7 @@
   "type": "commonjs",
   "dependencies": {
     "@supabase/supabase-js": "^2.106.2",
-    "dotenv": "^17.4.2",
-    "grammy": "^1.42.0"
+    "dotenv": "^17.4.2"
   },
   "devDependencies": {
     "@types/node": "^25.8.0",

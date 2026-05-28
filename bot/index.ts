@@ -1,7 +1,11 @@
-import "dotenv/config";
+import { config as loadEnv } from "dotenv";
+import path from "node:path";
 import { setDefaultResultOrder } from "node:dns";
 import { Agent } from "node:https";
 import { Bot, InlineKeyboard } from "grammy";
+
+loadEnv({ path: path.resolve(__dirname, "../.env.local") });
+loadEnv({ path: path.resolve(__dirname, ".env") });
 
 setDefaultResultOrder("ipv4first");
 
@@ -246,118 +250,48 @@ bot.command("topics", async (ctx) => {
   }
 });
 
-// 기사 생성 버튼
+// 기사 생성 버튼: 큐에 등록만 하고 즉시 응답.
 bot.callbackQuery(/^approve:(.+)$/, async (ctx) => {
   const id = ctx.match[1];
   await ctx.answerCallbackQuery();
   await ctx.editMessageReplyMarkup({ reply_markup: new InlineKeyboard() });
-  const msg = await ctx.reply("기사 생성 중...");
-  let approved = false;
+  const msg = await ctx.reply("기사 생성 큐에 등록 중...");
 
   try {
-    // 1. approved 상태로 변경 + suggestion row를 응답에서 직접 사용 (admin과 동일한 데이터 출처)
     const approveRes = await fetch(`${LOCAL_API}/api/suggest-clusters/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: "approved" }),
     });
     const approveData = await approveRes.json().catch(() => ({}));
-    console.log("PATCH approve 응답:", approveRes.status, approveData);
     if (!approveRes.ok || approveData.error) {
       throw new Error(
         `제안 승인 실패 (status ${approveRes.status}): ${approveData.error ?? approveRes.statusText}`
       );
     }
-    approved = true;
 
-    const suggestion = approveData.suggestion;
-    const topic = typeof suggestion?.topic === "string" ? suggestion.topic.trim() : "";
-    const keywords = Array.isArray(suggestion?.keywords) ? suggestion.keywords : [];
-    const articleIds = Array.isArray(suggestion?.article_ids) ? suggestion.article_ids : [];
-
-    if (!topic) {
-      throw new Error("제안 데이터에 topic이 없습니다.");
-    }
-    if (articleIds.length === 0 && keywords.length === 0) {
-      throw new Error("제안 데이터에 articleIds와 keywords가 모두 없습니다.");
-    }
-
-    // 2. 클러스터 생성 (admin과 동일: matchMode 생략 → API 기본값 'or')
-    const clusterRes = await fetch(`${LOCAL_API}/api/cluster`, {
+    const jobRes = await fetch(`${LOCAL_API}/api/jobs`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ topic, keywords, articleIds }),
+      body: JSON.stringify({
+        job_type: "generate_from_suggestion",
+        payload: { suggestionId: id },
+      }),
     });
-    const clusterData = await clusterRes.json().catch(() => ({}));
-    console.log("POST cluster 응답:", clusterRes.status, clusterData);
-    if (!clusterRes.ok || !clusterData.success) {
+    const jobData = await jobRes.json().catch(() => ({}));
+    if (!jobRes.ok || jobData.error) {
       throw new Error(
-        `클러스터 생성 실패 (status ${clusterRes.status}): ${clusterData.error ?? clusterRes.statusText}`
+        `잡 등록 실패 (status ${jobRes.status}): ${jobData.error ?? jobRes.statusText}`
       );
     }
-    const clusterId = clusterData.clusterId;
-    if (!clusterId) {
-      throw new Error(`클러스터 생성 실패: clusterId가 응답에 없습니다. payload=${JSON.stringify(clusterData)}`);
-    }
-
-    // 3. 기사 생성
-    const genRes = await fetch(`${LOCAL_API}/api/generate`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ clusterIds: [clusterId] }),
-    });
-    const genData = await genRes.json().catch(() => ({}));
-    console.log("POST generate 응답:", genRes.status, genData);
-    if (!genRes.ok) {
-      throw new Error(
-        `기사 생성 실패 (status ${genRes.status}): ${genData.error ?? genRes.statusText}`
-      );
-    }
-
-    const genResult = genData.results?.[0];
-    if (!genResult?.success) {
-      throw new Error(`기사 생성 실패: ${genResult?.error ?? "알 수 없는 오류"}`);
-    }
-    const articleId = genResult.article?.id;
-    if (!articleId) {
-      throw new Error("기사 생성 실패: article id가 없습니다.");
-    }
-
-    // 4. suggested_clusters 상태 published로 + clusterId 연결 (admin과 동일하게 camelCase)
-    const publishRes = await fetch(`${LOCAL_API}/api/suggest-clusters/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "published", clusterId }),
-    });
-    const publishData = await publishRes.json().catch(() => ({}));
-    console.log("PATCH published 응답:", publishRes.status, publishData);
-    if (!publishRes.ok || publishData.error) {
-      throw new Error(
-        `제안 published 처리 실패 (status ${publishRes.status}): ${publishData.error ?? publishRes.statusText}`
-      );
-    }
-
-    const keyboard = new InlineKeyboard()
-      .text("게시", `publish:${articleId}`)
-      .text("삭제", `delete:${articleId}`);
 
     await ctx.api.editMessageText(
       ctx.chat.id,
       msg.message_id,
-      `기사 생성 완료\n\n${formatArticleMessage(genResult.article?.title, genResult.article?.content)}`,
-      { reply_markup: keyboard }
+      "기사 생성 큐에 등록됐습니다 ⏳"
     );
   } catch (e) {
-    if (approved) {
-      await fetch(`${LOCAL_API}/api/suggest-clusters/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "pending" }),
-      }).catch((resetError) => {
-        console.error("제안 상태 pending 복구 실패:", resetError);
-      });
-    }
-    console.error("기사 생성 버튼 처리 실패:", e);
+    console.error("기사 생성 큐 등록 실패:", e);
     await ctx.api.editMessageText(ctx.chat.id, msg.message_id, `오류 발생: ${e}`);
   }
 });
