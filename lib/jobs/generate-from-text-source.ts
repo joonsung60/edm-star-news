@@ -1,7 +1,38 @@
 import { supabase } from '@/lib/supabase'
-import { SYSTEM_PROMPT_A } from '@/lib/prompts'
+import { SYSTEM_PROMPT_A, SYSTEM_PROMPT_B } from '@/lib/prompts'
 import { findGenre } from '@/lib/taxonomy'
 import displayNames from '@/lib/display-names.json'
+import Anthropic from '@anthropic-ai/sdk'
+
+const anthropic = new Anthropic({
+  apiKey: process.env.CLAUDE_API,
+})
+
+function collapseLineBreaksInsideQuotes(text: string): string {
+  let result = text.replace(/“([^”]*)”/g, (_, inner) => {
+    const fixed = inner.replace(/\n+/g, ' ').replace(/ {2,}/g, ' ').trim()
+    return `“${fixed}”`
+  })
+  result = result.replace(/"([^"]*)"/g, (_, inner) => {
+    const fixed = inner.replace(/\n+/g, ' ').replace(/ {2,}/g, ' ').trim()
+    return `"${fixed}"`
+  })
+  return result
+}
+
+const ARTICLE_RESPONSE_FORMAT = {
+  type: 'object',
+  properties: {
+    title: { type: 'string' },
+    content: { type: 'string' },
+    slug: { type: 'string' },
+    category: { type: 'string' },
+    genre: { type: 'string' },
+  },
+  required: ['title', 'content', 'slug', 'category', 'genre'],
+}
+
+type TextSourceMode = 'article' | 'translate'
 
 type TextSourceRow = {
   id: string
@@ -11,6 +42,7 @@ type TextSourceRow = {
   source_date: string | null
   generated_article_id: string | null
   status: string
+  mode: TextSourceMode | null
 }
 
 type GeneratedArticle = {
@@ -183,38 +215,139 @@ ${source.raw_text}
 async function generateArticle(source: TextSourceRow): Promise<GeneratedArticle> {
   const ollamaUrl = process.env.OLLAMA_BASE_URL || 'http://localhost:11434'
   const ollamaModel = process.env.OLLAMA_MODEL || 'qwen3:14b'
+  let lastError = '생성 실패'
+  let lastResponsePreview = ''
 
-  const res = await fetch(`${ollamaUrl}/api/generate`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: ollamaModel,
-      system: SYSTEM_PROMPT_A,
-      prompt: buildPrompt(source),
-      format: 'json',
-      stream: false,
-      think: false,
-    }),
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    const retryGuidance = attempt > 1
+      ? `\n이전 응답은 검증에 실패했습니다. 실패 이유: ${lastError}\n이번에는 반드시 title, content, slug, category, genre 다섯 키를 모두 채운 JSON 객체 하나만 출력하세요.\n`
+      : ''
+
+    const res = await fetch(`${ollamaUrl}/api/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: ollamaModel,
+        system: SYSTEM_PROMPT_A,
+        prompt: buildPrompt(source) + retryGuidance,
+        format: ARTICLE_RESPONSE_FORMAT,
+        options: { num_ctx: 32768, num_predict: 16384 },
+        stream: false,
+        think: false,
+      }),
+    })
+
+    const data = await res.json().catch(() => null)
+
+    if (!res.ok) {
+      lastError = `Ollama 오류: ${JSON.stringify(data).slice(0, 300)}`
+      continue
+    }
+
+    if (!data?.response || typeof data.response !== 'string') {
+      lastError = `Ollama 응답 없음: ${JSON.stringify(data).slice(0, 300)}`
+      continue
+    }
+
+    lastResponsePreview = data.response.slice(0, 500)
+
+    const generated = parseGeneratedArticle(data.response)
+    if (!generated) {
+      lastError = 'Ollama 응답을 기사 JSON으로 파싱하지 못했습니다.'
+      continue
+    }
+
+    return generated
+  }
+
+  throw new Error(
+    `${lastError}${lastResponsePreview ? ` 응답 미리보기: ${lastResponsePreview}` : ''}`
+  )
+}
+
+type GeneratedTranslation = {
+  title: string
+  content: string
+}
+
+function buildTranslatePrompt(source: TextSourceRow): string {
+  let sourceDateStr = '없음'
+  if (source.source_date) {
+    const date = new Date(`${source.source_date}T00:00:00+09:00`)
+    if (!Number.isNaN(date.getTime())) {
+      sourceDateStr = date.toLocaleDateString('ko-KR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        timeZone: 'Asia/Seoul',
+      })
+    }
+  }
+
+  return `다음 원문을 한국어로 충실히 번역하세요.
+
+[displayNameRules]
+${displayNameRules}
+
+[소스 메모 (맥락)]
+${source.source_memo ?? '없음'}
+
+[관련 날짜]
+${sourceDateStr}
+
+[원문]
+${source.raw_text}
+`
+}
+
+async function generateTranslation(source: TextSourceRow): Promise<GeneratedTranslation> {
+  const promptText = buildTranslatePrompt(source)
+
+  const message = await anthropic.messages.create({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 8192,
+    system: SYSTEM_PROMPT_B,
+    messages: [{ role: 'user', content: promptText }],
   })
 
-  const data = await res.json().catch(() => null)
-
-  if (!res.ok) {
-    throw new Error(`Ollama 오류: ${JSON.stringify(data).slice(0, 300)}`)
+  const firstBlock = message.content[0]
+  if (!firstBlock || firstBlock.type !== 'text') {
+    throw new Error('Claude API 응답이 없습니다.')
   }
 
-  if (!data?.response || typeof data.response !== 'string') {
-    throw new Error(`Ollama 응답 없음: ${JSON.stringify(data).slice(0, 300)}`)
+  let translatedContent = firstBlock.text.trim()
+  if (!translatedContent) {
+    throw new Error('Claude API 번역 내용이 비어 있습니다.')
   }
 
-  const generated = parseGeneratedArticle(data.response)
-  if (!generated) {
-    throw new Error(
-      `Ollama 응답을 기사 JSON으로 파싱하지 못했습니다. 응답 미리보기: ${data.response.slice(0, 500)}`
-    )
+  console.log('[text-source/translate] 후처리 전 줄바꿈 패턴:',
+    translatedContent.slice(0, 500).replace(/\n/g, '↵').replace(/\r/g, '↩'))
+
+  translatedContent = collapseLineBreaksInsideQuotes(translatedContent)
+
+  translatedContent = translatedContent
+    .replace(/\n{3,}/g, '\n\n')
+    .replace(/(?<!\n)\n(?!\n)/g, '\n\n')
+
+  translatedContent = translatedContent
+    .replace(/\n{2,}/g, '§PARA§')
+    .replace(/\n/g, ' ')
+    .replace(/§PARA§/g, '\n\n')
+    .trim()
+
+  const contentLines = translatedContent.split('\n\n')
+  let generatedTitle = ''
+  if (contentLines.length > 1) {
+    const firstChunk = contentLines[0].trim()
+    if (firstChunk.length <= 150 && !firstChunk.startsWith('“') && !firstChunk.startsWith('"')) {
+      generatedTitle = firstChunk.replace(/^[#*_\s]+|[#*_\s]+$/g, '').trim()
+      translatedContent = contentLines.slice(1).join('\n\n').trim()
+    }
   }
 
-  return generated
+  const title = generatedTitle || '제목 없음'
+
+  return { title, content: translatedContent }
 }
 
 export type TextSourceGenerationResult = {
@@ -278,24 +411,41 @@ export async function generateFromTextSource(
     textSource.generated_article_id = null
   }
 
-  const generated = await generateArticle(textSource)
+  const mode: TextSourceMode = textSource.mode === 'translate' ? 'translate' : 'article'
 
-  generated.title = applyDisplayNameMapping(generated.title)
-  generated.content = applyDisplayNameMapping(generated.content)
+  let title: string
+  let content: string
+  let slug: string
+  let category: string
+  let genre: string
 
-  if (textSource.source_url) {
-    generated.content += `\n\n*원문 참조: ${textSource.source_url}*`
+  if (mode === 'translate') {
+    const translated = await generateTranslation(textSource)
+    title = applyDisplayNameMapping(translated.title)
+    content = applyDisplayNameMapping(translated.content)
+    if (textSource.source_url) {
+      content += `\n\n*원문 참조: ${textSource.source_url}*`
+    }
+    slug = await ensureUniqueSlug(normalizeSlug(title))
+    category = '인터뷰'
+    genre = DEFAULT_GENRE
+  } else {
+    const generated = await generateArticle(textSource)
+    title = applyDisplayNameMapping(generated.title)
+    content = applyDisplayNameMapping(generated.content)
+    if (textSource.source_url) {
+      content += `\n\n*원문 참조: ${textSource.source_url}*`
+    }
+    slug = await ensureUniqueSlug(normalizeSlug(generated.slug))
+    category = normalizeCategory(generated.category)
+    genre = normalizeGenreForCategory(category, generated.genre)
   }
-
-  const slug = await ensureUniqueSlug(normalizeSlug(generated.slug))
-  const category = normalizeCategory(generated.category)
-  const genre = normalizeGenreForCategory(category, generated.genre)
 
   const { data: article, error: articleError } = await supabase
     .from('articles')
     .insert({
-      title: generated.title,
-      content: generated.content,
+      title,
+      content,
       cluster_id: null,
       published: false,
       slug,

@@ -7,13 +7,13 @@ import {
   Suggestion,
   SuggestionStatus,
   SuggestionWithArticles,
-  DEFAULT_ANALYSIS_LIMIT,
-  MAX_ANALYSIS_LIMIT
 } from '@/lib/suggest/types'
 import { SUGGEST_RESPONSE_FORMAT, SUGGEST_SYSTEM, buildClusterPrompt } from '@/lib/suggest/prompts'
 import { buildEntityIndex, loadEntityDictionary } from '@/lib/suggest/entity-index'
 import { chunkArticles, normalizeSuggestion, parseSuggestions, articleSnippet } from '@/lib/suggest/normalize'
 import { filterDuplicateSuggestions } from '@/lib/suggest/filters'
+import { mergeNormalizedSuggestions } from '@/lib/suggest/merge'
+import { rankAndTrim } from '@/lib/suggest/rank'
 import { attachSourceMeta, hydrateSuggestions, markRawArticlesSuggested } from '@/lib/suggest/db'
 
 const LLM_INPUT_MAX = 120
@@ -164,9 +164,14 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}))
-    const limit = typeof body.limit === 'number' && body.limit > 0
-      ? Math.min(body.limit, MAX_ANALYSIS_LIMIT)
-      : DEFAULT_ANALYSIS_LIMIT
+    const { limit: rawLimit } = body as { limit?: unknown }
+
+    const MIN_LIMIT = 60
+    const MAX_LIMIT = 200
+    const BATCH_SIZE = 20
+
+    const clampedLimit = Math.min(MAX_LIMIT, Math.max(MIN_LIMIT, Number(rawLimit) || 100))
+    const limit = Math.ceil(clampedLimit / BATCH_SIZE) * BATCH_SIZE
 
     const { data: articles, error } = await supabase
       .from('raw_articles')
@@ -322,8 +327,10 @@ export async function POST(req: NextRequest) {
       })
     }
 
+    const merged = mergeNormalizedSuggestions(normalized, rawArticles)
+    const ranked = rankAndTrim(merged, rawArticles, dict)
     const { suggestions: saveableSuggestions, duplicateSkipCount } =
-      await filterDuplicateSuggestions(normalized)
+      await filterDuplicateSuggestions(ranked)
 
     if (saveableSuggestions.length === 0) {
       console.log('[suggest-clusters] 저장 0건')

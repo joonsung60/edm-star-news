@@ -59,7 +59,7 @@ export type EntityEntry = {
 }
 
 export type EntityDataset = {
-  artists_top500_relevance_2024_2025?: Array<{ name?: string; aliases?: string[] }>
+  artists_top500_relevance_2024_2025?: Array<{ name?: string; aliases?: string[]; rank?: number; weight?: number }>
   major_edm_festivals_worldwide?: Array<{ name?: string }>
   edm_labels_key_artists?: Array<{ name?: string }>
   club_venues?: Array<{ name?: string; aliases?: string[] }>

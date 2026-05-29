@@ -22,7 +22,7 @@ export function loadEntityDictionary(): EntityEntry[] | null {
           .map((s) => (typeof s === 'string' ? s.toLowerCase() : ''))
           .filter((s) => s.length >= 2)
         if (surfaces.length === 0) continue
-        entries.push({ canonical: name, surfaces, weight: 1.0 })
+        entries.push({ canonical: name, surfaces, weight: artist.weight ?? 0.8 })
       }
       for (const festival of data.major_edm_festivals_worldwide ?? []) {
         const name = festival?.name

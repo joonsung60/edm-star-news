@@ -729,6 +729,8 @@ function SuggestTab() {
   const [isBlocklistLoading, setIsBlocklistLoading] = useState(false)
   const [isExtendedGenerating, setIsExtendedGenerating] = useState(false)
   const [extendedMessage, setExtendedMessage] = useState('')
+  const [suggestLimit, setSuggestLimit] = useState<number>(100)
+  const [suggestExtendedLimit, setSuggestExtendedLimit] = useState<number>(100)
 
   const load = useCallback(async (status: SubTab) => {
     setIsLoading(true)
@@ -793,7 +795,7 @@ function SuggestTab() {
       const res = await fetch('/api/suggest-clusters', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ limit: suggestLimit }),
       })
       const data = await res.json()
       if (data.error) {
@@ -1144,6 +1146,15 @@ function SuggestTab() {
       </section>
 
       <div className="mb-6 flex flex-wrap items-center gap-3">
+        <select
+          value={suggestLimit}
+          onChange={(e) => setSuggestLimit(Number(e.target.value))}
+          className="rounded border px-3 py-2 text-sm"
+        >
+          {[60, 80, 100, 120, 140, 160, 180, 200].map((n) => (
+            <option key={n} value={n}>{n}개</option>
+          ))}
+        </select>
         <button
           onClick={handleGenerate}
           disabled={isGenerating || isExtendedGenerating}
@@ -1151,6 +1162,15 @@ function SuggestTab() {
         >
           {isGenerating ? '분석 중...' : '토픽 제안 받기'}
         </button>
+        <select
+          value={suggestExtendedLimit}
+          onChange={(e) => setSuggestExtendedLimit(Number(e.target.value))}
+          className="rounded border px-3 py-2 text-sm"
+        >
+          {[60, 80, 100, 120, 140, 160, 180, 200].map((n) => (
+            <option key={n} value={n}>{n}개</option>
+          ))}
+        </select>
         <button
           onClick={handleExtendedGenerate}
           disabled={isGenerating || isExtendedGenerating}
@@ -1326,14 +1346,29 @@ function ArticlesReviewTab() {
   const [replacementCrop, setReplacementCrop] = useState<PercentCrop | null>(null)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
+  const [publishedSearch, setPublishedSearch] = useState('')
 
-  const load = useCallback(async (tab: ArticleReviewSubTab) => {
+  const load = useCallback(async (tab: ArticleReviewSubTab, search: string = '') => {
     setIsLoading(true)
     setError('')
     setMessage('')
 
     try {
-      const res = await fetch(`/api/articles?published=${tab === 'published'}&limit=50`)
+      const trimmed = search.trim()
+      const params = new URLSearchParams()
+      params.set('published', tab === 'published' ? 'true' : 'false')
+      if (tab === 'published') {
+        if (trimmed) {
+          params.set('search', trimmed)
+          params.set('limit', '20')
+        } else {
+          params.set('limit', '10')
+        }
+      } else {
+        params.set('limit', '50')
+      }
+
+      const res = await fetch(`/api/articles?${params.toString()}`)
       const data = await res.json()
 
       if (data.error) {
@@ -1351,9 +1386,16 @@ function ArticlesReviewTab() {
   }, [])
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    load(subTab)
-  }, [subTab, load])
+    if (subTab !== 'published') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      load(subTab, '')
+      return
+    }
+    const timer = setTimeout(() => {
+      load('published', publishedSearch)
+    }, 250)
+    return () => clearTimeout(timer)
+  }, [subTab, publishedSearch, load])
 
   const handlePublish = async (article: AdminArticle) => {
     setProcessing(article.id)
@@ -1370,10 +1412,39 @@ function ArticlesReviewTab() {
         setError(data.error)
       } else {
         setMessage(`게시 완료: ${data.article?.title ?? article.title}`)
-        await load(subTab)
+        await load(subTab, subTab === 'published' ? publishedSearch : '')
       }
     } catch {
       setError('게시 중 오류가 발생했습니다.')
+    }
+
+    setProcessing(null)
+  }
+
+  const handleUnpublish = async (article: AdminArticle) => {
+    const ok = window.confirm('이 기사를 게시 취소하시겠습니까?')
+    if (!ok) return
+
+    setProcessing(article.id)
+    setError('')
+    setMessage('')
+
+    try {
+      const res = await fetch(`/api/articles/${article.id}/unpublish`, {
+        method: 'PATCH',
+      })
+      const data = await res.json()
+
+      if (data.error) {
+        setError(data.error)
+      } else {
+        setMessage(`게시 취소 완료: ${data.article?.title ?? article.title}`)
+        setArticles((prev) => prev.filter((a) => a.id !== article.id))
+        setPublishedSearch('')
+        setSubTab('draft')
+      }
+    } catch {
+      setError('게시 취소 중 오류가 발생했습니다.')
     }
 
     setProcessing(null)
@@ -1445,7 +1516,7 @@ function ArticlesReviewTab() {
       } else {
         setMessage(`수정 완료: ${data.article?.title ?? editTitle}`)
         cancelEdit()
-        await load(subTab)
+        await load(subTab, subTab === 'published' ? publishedSearch : '')
       }
     } catch {
       setError('수정 중 오류가 발생했습니다.')
@@ -1472,7 +1543,7 @@ function ArticlesReviewTab() {
         setError(data.error)
       } else {
         setMessage(`삭제 완료: ${data.article?.title ?? article.title}`)
-        await load(subTab)
+        await load(subTab, subTab === 'published' ? publishedSearch : '')
       }
     } catch {
       setError('삭제 중 오류가 발생했습니다.')
@@ -1514,7 +1585,7 @@ function ArticlesReviewTab() {
       } else {
         setMessage(`이미지 교체 완료: ${data.article?.title ?? article.title}`)
         cancelReplaceImage()
-        await load(subTab)
+        await load(subTab, subTab === 'published' ? publishedSearch : '')
       }
     } catch (err) {
       setError(String(err))
@@ -1552,6 +1623,27 @@ function ArticlesReviewTab() {
           </button>
         ))}
       </div>
+
+      {subTab === 'published' && (
+        <div className="mb-4 flex items-center gap-2">
+          <input
+            type="search"
+            value={publishedSearch}
+            onChange={(e) => setPublishedSearch(e.target.value)}
+            placeholder="제목 또는 slug 검색"
+            className="w-full max-w-md rounded border px-3 py-2 text-sm"
+          />
+          {publishedSearch && (
+            <button
+              type="button"
+              onClick={() => setPublishedSearch('')}
+              className="px-3 py-2 text-sm text-gray-500 hover:text-black"
+            >
+              지우기
+            </button>
+          )}
+        </div>
+      )}
 
       {message && <p className="text-green-600 mb-4">{message}</p>}
       {error && <p className="text-red-500 mb-4">{error}</p>}
@@ -1767,6 +1859,15 @@ function ArticlesReviewTab() {
                         >
                           이미지 교체
                         </button>
+                        {subTab === 'published' && (
+                          <button
+                            onClick={() => handleUnpublish(article)}
+                            disabled={processing !== null || editingId !== null || replacingId !== null}
+                            className="px-3 py-2 border border-red-300 text-red-600 text-sm rounded font-semibold hover:bg-red-50 disabled:opacity-50 whitespace-nowrap"
+                          >
+                            {processing === article.id ? '처리 중...' : '게시 취소'}
+                          </button>
+                        )}
                         {subTab === 'draft' && (
                           <>
                             <button
@@ -2014,6 +2115,7 @@ function TextSourceTab() {
   const [sourceMemo, setSourceMemo] = useState('')
   const [sourceUrl, setSourceUrl] = useState('')
   const [sourceDate, setSourceDate] = useState('')
+  const [mode, setMode] = useState<'article' | 'translate'>('article')
   const [isSaving, setIsSaving] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [savedSourceId, setSavedSourceId] = useState<string | null>(null)
@@ -2040,6 +2142,7 @@ function TextSourceTab() {
           source_memo: sourceMemo,
           source_url: sourceUrl,
           source_date: sourceDate,
+          mode,
         }),
       })
       const data = await res.json()
@@ -2103,6 +2206,34 @@ function TextSourceTab() {
       </p>
 
       <div className="space-y-5 rounded border p-5">
+        <div>
+          <label className="mb-2 block text-sm font-semibold text-gray-800">
+            생성 모드
+          </label>
+          <div className="flex flex-wrap items-center gap-4 text-sm">
+            <label className="flex items-center gap-2">
+              <input
+                type="radio"
+                name="text-source-mode"
+                value="article"
+                checked={mode === 'article'}
+                onChange={() => setMode('article')}
+              />
+              <span>단신 기사 생성</span>
+            </label>
+            <label className="flex items-center gap-2">
+              <input
+                type="radio"
+                name="text-source-mode"
+                value="translate"
+                checked={mode === 'translate'}
+                onChange={() => setMode('translate')}
+              />
+              <span>충실 번역</span>
+            </label>
+          </div>
+        </div>
+
         <div>
           <label className="mb-2 block text-sm font-semibold text-gray-800">
             텍스트 원문

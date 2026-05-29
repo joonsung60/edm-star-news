@@ -5,7 +5,8 @@
       "name": "David Guetta",
       "aliases": [
         "Jack Back"
-      ]
+      ],
+      "weight": 1.5
     },
     {
       "rank": 2,
@@ -14,7 +15,8 @@
         "Ytram",
         "GRX",
         "AREA21"
-      ]
+      ],
+      "weight": 1.5
     },
     {
       "rank": 3,
@@ -22,7 +24,8 @@
       "aliases": [
         "VER:WEST",
         "Allure"
-      ]
+      ],
+      "weight": 1.5
     },
     {
       "rank": 4,
@@ -30,33 +33,38 @@
       "aliases": [
         "Rising Star",
         "Gaia"
-      ]
+      ],
+      "weight": 1.5
     },
     {
       "rank": 5,
       "name": "Anyma",
       "aliases": [
         "Matteo Milleri"
-      ]
+      ],
+      "weight": 1.5
     },
     {
       "rank": 6,
       "name": "John Summit",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 7,
       "name": "Fred again..",
       "aliases": [
         "Fred Again"
-      ]
+      ],
+      "weight": 1.5
     },
     {
       "rank": 8,
       "name": "Skrillex",
       "aliases": [
         "Sonny Moore"
-      ]
+      ],
+      "weight": 1.5
     },
     {
       "rank": 9,
@@ -64,7 +72,8 @@
       "aliases": [
         "Love Regenerator",
         "Adam Wiles"
-      ]
+      ],
+      "weight": 1.5
     },
     {
       "rank": 10,
@@ -73,37 +82,44 @@
         "Axwell",
         "Steve Angello",
         "Sebastian Ingrosso"
-      ]
+      ],
+      "weight": 1.5
     },
     {
       "rank": 11,
       "name": "Dom Dolla",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 12,
       "name": "FISHER",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 13,
       "name": "Chris Lake",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 14,
       "name": "Charlotte de Witte",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 15,
       "name": "Amelie Lens",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 16,
       "name": "Peggy Gou",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 17,
@@ -112,22 +128,26 @@
         "Adam Port",
         "&ME",
         "Rampa"
-      ]
+      ],
+      "weight": 1.5
     },
     {
       "rank": 18,
       "name": "Adam Port",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 19,
       "name": "&ME",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 20,
       "name": "Rampa",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 21,
@@ -135,34 +155,40 @@
       "aliases": [
         "Anyma",
         "MRAK"
-      ]
+      ],
+      "weight": 1.5
     },
     {
       "rank": 22,
       "name": "MRAK",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 23,
       "name": "Mau P",
       "aliases": [
         "Maurice West"
-      ]
+      ],
+      "weight": 1.5
     },
     {
       "rank": 24,
       "name": "HUGEL",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 25,
       "name": "Meduza",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 26,
       "name": "Alok",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 27,
@@ -170,88 +196,104 @@
       "aliases": [
         "Dimitri Vegas",
         "Like Mike"
-      ]
+      ],
+      "weight": 1.5
     },
     {
       "rank": 28,
       "name": "Hardwell",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 29,
       "name": "Afrojack",
       "aliases": [
         "NLW"
-      ]
+      ],
+      "weight": 1.5
     },
     {
       "rank": 30,
       "name": "Steve Aoki",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 31,
       "name": "Don Diablo",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 32,
       "name": "Oliver Heldens",
       "aliases": [
         "HI-LO"
-      ]
+      ],
+      "weight": 1.5
     },
     {
       "rank": 33,
       "name": "HI-LO",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 34,
       "name": "Vintage Culture",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 35,
       "name": "Alesso",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 36,
       "name": "Nicky Romero",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 37,
       "name": "W&W",
       "aliases": [
         "NWYR"
-      ]
+      ],
+      "weight": 1.5
     },
     {
       "rank": 38,
       "name": "NWYR",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 39,
       "name": "R3HAB",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 40,
       "name": "Timmy Trumpet",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 41,
       "name": "Marshmello",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 42,
       "name": "The Chainsmokers",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 43,
@@ -259,22 +301,26 @@
       "aliases": [
         "Thomas Wesley",
         "Major Lazer"
-      ]
+      ],
+      "weight": 1.5
     },
     {
       "rank": 44,
       "name": "Major Lazer",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 45,
       "name": "DJ Snake",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 46,
       "name": "Illenium",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 47,
@@ -282,51 +328,60 @@
       "aliases": [
         "Virtual Self",
         "Air2Earth"
-      ]
+      ],
+      "weight": 1.5
     },
     {
       "rank": 48,
       "name": "Virtual Self",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 49,
       "name": "Madeon",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 50,
       "name": "Zedd",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 51,
       "name": "deadmau5",
       "aliases": [
         "testpilot"
-      ]
+      ],
+      "weight": 1.5
     },
     {
       "rank": 52,
       "name": "testpilot",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 53,
       "name": "Above & Beyond",
       "aliases": [
         "OceanLab"
-      ]
+      ],
+      "weight": 1.5
     },
     {
       "rank": 54,
       "name": "Aly & Fila",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 55,
       "name": "Paul van Dyk",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 56,
@@ -334,121 +389,144 @@
       "aliases": [
         "System F",
         "Gouryella"
-      ]
+      ],
+      "weight": 1.5
     },
     {
       "rank": 57,
       "name": "Gouryella",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 58,
       "name": "Vini Vici",
       "aliases": [
         "Sesto Sento"
-      ]
+      ],
+      "weight": 1.5
     },
     {
       "rank": 59,
       "name": "Andrew Rayel",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 60,
       "name": "Gareth Emery",
       "aliases": [
         "LSR/CITY"
-      ]
+      ],
+      "weight": 1.5
     },
     {
       "rank": 61,
       "name": "Ben Böhmer",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 62,
       "name": "Lane 8",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 63,
       "name": "Yotto",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 64,
       "name": "Tinlicker",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 65,
       "name": "ARTBAT",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 66,
       "name": "CamelPhat",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 67,
       "name": "Adriatique",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 68,
       "name": "Mind Against",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 69,
       "name": "Mathame",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 70,
       "name": "Colyn",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 71,
       "name": "Argy",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 72,
       "name": "Miss Monique",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 73,
       "name": "Korolova",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 74,
       "name": "Kevin de Vries",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 75,
       "name": "Innellea",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 76,
       "name": "Stephan Bodzin",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 77,
       "name": "Boris Brejcha",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 78,
       "name": "Solomun",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 79,
@@ -456,650 +534,778 @@
       "aliases": [
         "Pryda",
         "Cirez D"
-      ]
+      ],
+      "weight": 1.5
     },
     {
       "rank": 80,
       "name": "Pryda",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 81,
       "name": "Cirez D",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 82,
       "name": "Carl Cox",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 83,
       "name": "Adam Beyer",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 84,
       "name": "Nina Kraviz",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 85,
       "name": "Reinier Zonneveld",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 86,
       "name": "Indira Paganotto",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 87,
       "name": "Sara Landry",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 88,
       "name": "I Hate Models",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 89,
       "name": "999999999",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 90,
       "name": "Klangkuenstler",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 91,
       "name": "Alignment",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 92,
       "name": "Shlømo",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 93,
       "name": "Anfisa Letyago",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 94,
       "name": "Deborah De Luca",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 95,
       "name": "Lilly Palmer",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 96,
       "name": "Eli Brown",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 97,
       "name": "Layton Giordani",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 98,
       "name": "Maddix",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 99,
       "name": "MORTEN",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 100,
       "name": "KAAZE",
-      "aliases": []
+      "aliases": [],
+      "weight": 1.5
     },
     {
       "rank": 101,
       "name": "Blasterjaxx",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 102,
       "name": "Bassjackers",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 103,
       "name": "VINAI",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 104,
       "name": "Quintino",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 105,
       "name": "Matisse & Sadko",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 106,
       "name": "DubVision",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 107,
       "name": "Third Party",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 108,
       "name": "Sick Individuals",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 109,
       "name": "Lucas & Steve",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 110,
       "name": "Mike Williams",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 111,
       "name": "Brooks",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 112,
       "name": "Mesto",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 113,
       "name": "Curbi",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 114,
       "name": "Tujamo",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 115,
       "name": "KSHMR",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 116,
       "name": "Dimitri Vangelis & Wyman",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 117,
       "name": "Nervo",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 118,
       "name": "Krewella",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 119,
       "name": "Galantis",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 120,
       "name": "Lost Frequencies",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 121,
       "name": "Kygo",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 122,
       "name": "Sigala",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 123,
       "name": "Robin Schulz",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 124,
       "name": "Felix Jaehn",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 125,
       "name": "Purple Disco Machine",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 126,
       "name": "MK",
       "aliases": [
         "Marc Kinchen"
-      ]
+      ],
+      "weight": 1
     },
     {
       "rank": 127,
       "name": "Sonny Fodera",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 128,
       "name": "Jamie Jones",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 129,
       "name": "Michael Bibi",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 130,
       "name": "Pawsa",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 131,
       "name": "Hot Since 82",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 132,
       "name": "Green Velvet",
       "aliases": [
         "Cajmere"
-      ]
+      ],
+      "weight": 1
     },
     {
       "rank": 133,
       "name": "Claude VonStroke",
       "aliases": [
         "Barclay Crenshaw"
-      ]
+      ],
+      "weight": 1
     },
     {
       "rank": 134,
       "name": "Barclay Crenshaw",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 135,
       "name": "Patrick Topping",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 136,
       "name": "Dennis Cruz",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 137,
       "name": "Loco Dice",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 138,
       "name": "Marco Carola",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 139,
       "name": "The Martinez Brothers",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 140,
       "name": "Joseph Capriati",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 141,
       "name": "Fleur Shore",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 142,
       "name": "Cloonee",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 143,
       "name": "Chris Lorenzo",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 144,
       "name": "AC Slater",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 145,
       "name": "Tchami",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 146,
       "name": "Malaa",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 147,
       "name": "Habstrakt",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 148,
       "name": "Jauz",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 149,
       "name": "Joyryde",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 150,
       "name": "Dr. Fresch",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 151,
       "name": "Matroda",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 152,
       "name": "Noizu",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 153,
       "name": "Chris Stussy",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 154,
       "name": "ANOTR",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 155,
       "name": "Odd Mob",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 156,
       "name": "Westend",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 157,
       "name": "Max Styler",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 158,
       "name": "James Hype",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 159,
       "name": "SIDEPIECE",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 160,
       "name": "SOFI TUKKER",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 161,
       "name": "Disclosure",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 162,
       "name": "Bicep",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 163,
       "name": "Overmono",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 164,
       "name": "Four Tet",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 165,
       "name": "Caribou",
       "aliases": [
         "Daphni"
-      ]
+      ],
+      "weight": 1
     },
     {
       "rank": 166,
       "name": "Daphni",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 167,
       "name": "Jamie xx",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 168,
       "name": "Floating Points",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 169,
       "name": "Bonobo",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 170,
       "name": "Maribou State",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 171,
       "name": "RÜFÜS DU SOL",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 172,
       "name": "ODESZA",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 173,
       "name": "Tycho",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 174,
       "name": "Tourist",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 175,
       "name": "SG Lewis",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 176,
       "name": "Barry Can't Swim",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 177,
       "name": "DJ Seinfeld",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 178,
       "name": "Ross From Friends",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 179,
       "name": "Mall Grab",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 180,
       "name": "Logic1000",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 181,
       "name": "Jayda G",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 182,
       "name": "TSHA",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 183,
       "name": "Honey Dijon",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 184,
       "name": "The Blessed Madonna",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 185,
       "name": "Carlita",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 186,
       "name": "Chloé Caillet",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 187,
       "name": "Sama' Abdulhadi",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 188,
       "name": "HAAi",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 189,
       "name": "Helena Hauff",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 190,
       "name": "VTSS",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 191,
       "name": "SPFDJ",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 192,
       "name": "Ellen Allien",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 193,
       "name": "Paula Temple",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 194,
       "name": "Dax J",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 195,
       "name": "Perc",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 196,
       "name": "Blawan",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 197,
       "name": "Surgeon",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 198,
       "name": "Regal",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 199,
       "name": "FJAAK",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 200,
       "name": "Âme",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 201,
       "name": "Dixon",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 202,
       "name": "Joris Voorn",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 203,
       "name": "ANNA",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 204,
       "name": "Nicole Moudaber",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 205,
       "name": "Pan-Pot",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 206,
       "name": "Tiga",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 207,
@@ -1107,137 +1313,162 @@
       "aliases": [
         "Maetrik",
         "Mariel Ito"
-      ]
+      ],
+      "weight": 1
     },
     {
       "rank": 208,
       "name": "Richie Hawtin",
       "aliases": [
         "Plastikman"
-      ]
+      ],
+      "weight": 1
     },
     {
       "rank": 209,
       "name": "Plastikman",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 210,
       "name": "Jeff Mills",
       "aliases": [
         "The Wizard"
-      ]
+      ],
+      "weight": 1
     },
     {
       "rank": 211,
       "name": "Robert Hood",
       "aliases": [
         "Floorplan"
-      ]
+      ],
+      "weight": 1
     },
     {
       "rank": 212,
       "name": "Floorplan",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 213,
       "name": "Ben Klock",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 214,
       "name": "Marcel Dettmann",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 215,
       "name": "DVS1",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 216,
       "name": "Luke Slater",
       "aliases": [
         "Planetary Assault Systems"
-      ]
+      ],
+      "weight": 1
     },
     {
       "rank": 217,
       "name": "Planetary Assault Systems",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 218,
       "name": "Oscar Mulero",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 219,
       "name": "Sven Väth",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 220,
       "name": "Kölsch",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 221,
       "name": "Booka Shade",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 222,
       "name": "Röyksopp",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 223,
       "name": "The Chemical Brothers",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 224,
       "name": "Underworld",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 225,
       "name": "Orbital",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 226,
       "name": "The Prodigy",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 227,
       "name": "Justice",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 228,
       "name": "Gesaffelstein",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 229,
       "name": "Boys Noize",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 230,
       "name": "Soulwax",
       "aliases": [
         "2manydjs"
-      ]
+      ],
+      "weight": 1
     },
     {
       "rank": 231,
       "name": "2manydjs",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 232,
@@ -1245,717 +1476,858 @@
       "aliases": [
         "Modeselektor",
         "Apparat"
-      ]
+      ],
+      "weight": 1
     },
     {
       "rank": 233,
       "name": "Modeselektor",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 234,
       "name": "Apparat",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 235,
       "name": "Aphex Twin",
       "aliases": [
         "AFX"
-      ]
+      ],
+      "weight": 1
     },
     {
       "rank": 236,
       "name": "AFX",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 237,
       "name": "Squarepusher",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 238,
       "name": "Autechre",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 239,
       "name": "Boards of Canada",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 240,
       "name": "Burial",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 241,
       "name": "Skee Mask",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 242,
       "name": "Objekt",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 243,
       "name": "Shed",
       "aliases": [
         "Head High"
-      ]
+      ],
+      "weight": 1
     },
     {
       "rank": 244,
       "name": "Kiasmos",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 245,
       "name": "Max Cooper",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 246,
       "name": "Jon Hopkins",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 247,
       "name": "Christian Löffler",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 248,
       "name": "Nils Hoffmann",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 249,
       "name": "Parra for Cuva",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 250,
       "name": "Jan Blomqvist",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 251,
       "name": "WhoMadeWho",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 252,
       "name": "Monolink",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 253,
       "name": "Bob Moses",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 254,
       "name": "Elderbrook",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 255,
       "name": "Ben Hemsley",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 256,
       "name": "Marlon Hoffstadt",
       "aliases": [
         "DJ Daddy Trance"
-      ]
+      ],
+      "weight": 1
     },
     {
       "rank": 257,
       "name": "DJ Heartstring",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 258,
       "name": "Malugi",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 259,
       "name": "Narciss",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 260,
       "name": "Funk Tribu",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 261,
       "name": "KI/KI",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 262,
       "name": "Pegassi",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 263,
       "name": "Trance Wax",
       "aliases": [
         "Ejeca"
-      ]
+      ],
+      "weight": 1
     },
     {
       "rank": 264,
       "name": "Ejeca",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 265,
       "name": "Anetha",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 266,
       "name": "Courtesy",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 267,
       "name": "Cera Khin",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 268,
       "name": "Nastia",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 269,
       "name": "Daria Kolosova",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 270,
       "name": "Mama Snake",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 271,
       "name": "Juliet Fox",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 272,
       "name": "Ida Engberg",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 273,
       "name": "Eli & Fur",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 274,
       "name": "Giolì & Assia",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 275,
       "name": "Sultan + Shepard",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 276,
       "name": "Le Youth",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 277,
       "name": "Marsh",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 278,
       "name": "Jerro",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 279,
       "name": "Luttrell",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 280,
       "name": "Qrion",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 281,
       "name": "Durante",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 282,
       "name": "CRi",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 283,
       "name": "Nora En Pure",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 284,
       "name": "Eelke Kleijn",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 285,
       "name": "Guy J",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 286,
       "name": "Hernan Cattaneo",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 287,
       "name": "Nick Warren",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 288,
       "name": "Guy Mantzur",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 289,
       "name": "Sasha",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 290,
       "name": "John Digweed",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 291,
       "name": "Cristoph",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 292,
       "name": "Franky Wah",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 293,
       "name": "Yousef",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 294,
       "name": "Enrico Sangiuliano",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 295,
       "name": "UMEK",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 296,
       "name": "Space 92",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 297,
       "name": "Sub Focus",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 298,
       "name": "Dimension",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 299,
       "name": "Wilkinson",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 300,
       "name": "Netsky",
-      "aliases": []
+      "aliases": [],
+      "weight": 1
     },
     {
       "rank": 301,
       "name": "Chase & Status",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 302,
       "name": "Pendulum",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 303,
       "name": "Kanine",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 304,
       "name": "Metrik",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 305,
       "name": "Culture Shock",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 306,
       "name": "1991",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 307,
       "name": "Delta Heavy",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 308,
       "name": "Camo & Krooked",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 309,
       "name": "Noisia",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 310,
       "name": "Spor",
       "aliases": [
         "Feed Me"
-      ]
+      ],
+      "weight": 0.7
     },
     {
       "rank": 311,
       "name": "Feed Me",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 312,
       "name": "Andy C",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 313,
       "name": "A.M.C",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 314,
       "name": "Hybrid Minds",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 315,
       "name": "Benny L",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 316,
       "name": "Bou",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 317,
       "name": "Hedex",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 318,
       "name": "Mozey",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 319,
       "name": "Turno",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 320,
       "name": "Serum",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 321,
       "name": "DJ Marky",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 322,
       "name": "Goldie",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 323,
       "name": "LTJ Bukem",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 324,
       "name": "High Contrast",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 325,
       "name": "London Elektricity",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 326,
       "name": "Calibre",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 327,
       "name": "Alix Perez",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 328,
       "name": "Ivy Lab",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 329,
       "name": "dBridge",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 330,
       "name": "S.P.Y",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 331,
       "name": "Koven",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 332,
       "name": "REAPER",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 333,
       "name": "Zeds Dead",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 334,
       "name": "Excision",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 335,
       "name": "Subtronics",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 336,
       "name": "SVDDEN DEATH",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 337,
       "name": "Wooli",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 338,
       "name": "Sullivan King",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 339,
       "name": "Kayzo",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 340,
       "name": "SLANDER",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 341,
       "name": "Seven Lions",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 342,
       "name": "Jason Ross",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 343,
       "name": "Trivecta",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 344,
       "name": "Gryffin",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 345,
       "name": "Dabin",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 346,
       "name": "Said The Sky",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 347,
       "name": "Nurko",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 348,
       "name": "William Black",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 349,
       "name": "ARMNHMR",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 350,
       "name": "San Holo",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 351,
       "name": "Taska Black",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 352,
       "name": "Kasbo",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 353,
       "name": "Petit Biscuit",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 354,
       "name": "Flume",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 355,
       "name": "What So Not",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 356,
       "name": "RL Grime",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 357,
       "name": "Baauer",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 358,
       "name": "Hudson Mohawke",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 359,
       "name": "Rustie",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 360,
       "name": "Mr. Carmack",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 361,
       "name": "TroyBoi",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 362,
       "name": "ISOxo",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 363,
       "name": "Knock2",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 364,
       "name": "Moore Kismet",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 365,
       "name": "Juelz",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 366,
       "name": "NGHTMRE",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 367,
       "name": "Boombox Cartel",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 368,
       "name": "Yellow Claw",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 369,
       "name": "Valentino Khan",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 370,
       "name": "Party Favor",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 371,
       "name": "Dillon Francis",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 372,
       "name": "A-Trak",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 373,
@@ -1963,32 +2335,38 @@
       "aliases": [
         "A-Trak",
         "Armand Van Helden"
-      ]
+      ],
+      "weight": 0.7
     },
     {
       "rank": 374,
       "name": "Armand Van Helden",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 375,
       "name": "Todd Terry",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 376,
       "name": "Roger Sanchez",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 377,
       "name": "David Morales",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 378,
       "name": "Louie Vega",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 379,
@@ -1996,126 +2374,150 @@
       "aliases": [
         "Louie Vega",
         "Kenny Dope"
-      ]
+      ],
+      "weight": 0.7
     },
     {
       "rank": 380,
       "name": "Kerri Chandler",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 381,
       "name": "Moodymann",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 382,
       "name": "Theo Parrish",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 383,
       "name": "Carl Craig",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 384,
       "name": "Kevin Saunderson",
       "aliases": [
         "Inner City"
-      ]
+      ],
+      "weight": 0.7
     },
     {
       "rank": 385,
       "name": "Inner City",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 386,
       "name": "Derrick May",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 387,
       "name": "Juan Atkins",
       "aliases": [
         "Model 500"
-      ]
+      ],
+      "weight": 0.7
     },
     {
       "rank": 388,
       "name": "Model 500",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 389,
       "name": "Octave One",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 390,
       "name": "Underground Resistance",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 391,
       "name": "DJ Stingray 313",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 392,
       "name": "Drexciya",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 393,
       "name": "DJ Bone",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 394,
       "name": "The Advent",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 395,
       "name": "Dave Clarke",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 396,
       "name": "Laurent Garnier",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 397,
       "name": "Miss Kittin",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 398,
       "name": "The Hacker",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 399,
       "name": "Vitalic",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 400,
       "name": "Etienne de Crécy",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 401,
       "name": "Daft Punk",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 402,
       "name": "Alan Braxe",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 403,
@@ -2124,494 +2526,592 @@
         "Thomas Bangalter",
         "Alan Braxe",
         "Benjamin Diamond"
-      ]
+      ],
+      "weight": 0.7
     },
     {
       "rank": 404,
       "name": "Cassius",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 405,
       "name": "Breakbot",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 406,
       "name": "Busy P",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 407,
       "name": "DJ Mehdi",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 408,
       "name": "SebastiAn",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 409,
       "name": "Mr. Oizo",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 410,
       "name": "Brodinski",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 411,
       "name": "Agents Of Time",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 412,
       "name": "Recondite",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 413,
       "name": "Rodriguez Jr.",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 414,
       "name": "Sebastian Leger",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 415,
       "name": "Tim Green",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 416,
       "name": "Patrice Bäumel",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 417,
       "name": "Guy Gerber",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 418,
       "name": "Lee Burridge",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 419,
       "name": "Traumer",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 420,
       "name": "Priku",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 421,
       "name": "Raresh",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 422,
       "name": "Ricardo Villalobos",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 423,
       "name": "Zip",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 424,
       "name": "Sonja Moonear",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 425,
       "name": "Seth Troxler",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 426,
       "name": "Damian Lazarus",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 427,
       "name": "Bedouin",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 428,
       "name": "Blond:ish",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 429,
       "name": "Black Coffee",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 430,
       "name": "Shimza",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 431,
       "name": "Caiiro",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 432,
       "name": "Da Capo",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 433,
       "name": "Culoe De Song",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 434,
       "name": "Sun-El Musician",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 435,
       "name": "Kabza De Small",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 436,
       "name": "DJ Maphorisa",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 437,
       "name": "Major League DJz",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 438,
       "name": "Uncle Waffles",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 439,
       "name": "DBN Gogo",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 440,
       "name": "Musa Keys",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 441,
       "name": "Kelvin Momo",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 442,
       "name": "Vanco",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 443,
       "name": "Francis Mercier",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 444,
       "name": "AMÉMÉ",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 445,
       "name": "MoBlack",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 446,
       "name": "Satori",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 447,
       "name": "Acid Pauli",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 448,
       "name": "Mira",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 449,
       "name": "Nicola Cruz",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 450,
       "name": "Dengue Dengue Dengue",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 451,
       "name": "Chancha Via Circuito",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 452,
       "name": "Bomba Estéreo",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 453,
       "name": "Nic Fanciulli",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 454,
       "name": "Dennis Ferrer",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 455,
       "name": "Franky Rizardo",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 456,
       "name": "Low Steppa",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 457,
       "name": "Duke Dumont",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 458,
       "name": "Gorgon City",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 459,
       "name": "Claptone",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 460,
       "name": "Folamour",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 461,
       "name": "Dan Shake",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 462,
       "name": "Bellaire",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 463,
       "name": "Motor City Drum Ensemble",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 464,
       "name": "Hunee",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 465,
       "name": "Palms Trax",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 466,
       "name": "Antal",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 467,
       "name": "Shanti Celeste",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 468,
       "name": "Midland",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 469,
       "name": "Ben UFO",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 470,
       "name": "Pearson Sound",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 471,
       "name": "Pangaea",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 472,
       "name": "Joy Orbison",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 473,
       "name": "Sicaria",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 474,
       "name": "Sherelle",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 475,
       "name": "Tim Reaper",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 476,
       "name": "Special Request",
       "aliases": [
         "Paul Woolford"
-      ]
+      ],
+      "weight": 0.7
     },
     {
       "rank": 477,
       "name": "Paul Woolford",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 478,
       "name": "Skream",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 479,
       "name": "Benga",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 480,
       "name": "Coki",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 481,
       "name": "Mala",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 482,
       "name": "Digital Mystikz",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 483,
       "name": "Loefah",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 484,
       "name": "Kode9",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 485,
       "name": "Mount Kimbie",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 486,
       "name": "George FitzGerald",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 487,
       "name": "Dusky",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 488,
       "name": "Kettama",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 489,
       "name": "X CLUB.",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 490,
       "name": "Skin On Skin",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 491,
       "name": "Partiboi69",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 492,
       "name": "Prospa",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 493,
       "name": "DJ Boring",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 494,
       "name": "KiNK",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 495,
       "name": "Octo Octa",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 496,
       "name": "Eris Drew",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 497,
       "name": "Avalon Emerson",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 498,
       "name": "Bambounou",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 499,
       "name": "Batu",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 500,
       "name": "Ploy",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 501,
@@ -2620,14 +3120,16 @@
         "Lord Sabre",
         "The Sabres of Paradise",
         "Two Lone Swordsmen"
-      ]
+      ],
+      "weight": 0.7
     },
     {
       "rank": 502,
       "name": "Whethan",
       "aliases": [
         "Ethan Snoreck"
-      ]
+      ],
+      "weight": 0.7
     },
     {
       "rank": 503,
@@ -2635,31 +3137,36 @@
       "aliases": [
         "The Aztec Mystic",
         "DJ Rolando"
-      ]
+      ],
+      "weight": 0.7
     },
     {
       "rank": 504,
       "name": "Cinthie",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 505,
       "name": "Jamie Principle",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 506,
       "name": "Frankie Knuckles",
       "aliases": [
         "Director's Cut"
-      ]
+      ],
+      "weight": 0.7
     },
     {
       "rank": 507,
       "name": "Delon",
       "aliases": [
         "Delon & Dalcan"
-      ]
+      ],
+      "weight": 0.7
     },
     {
       "rank": 508,
@@ -2668,111 +3175,132 @@
         "Tim Berg",
         "Tom Hangs",
         "Tim Bergling"
-      ]
+      ],
+      "weight": 0.7
     },
     {
       "rank": 509,
       "name": "Kaskade",
       "aliases": [
         "Ryan Raddon"
-      ]
+      ],
+      "weight": 0.7
     },
     {
       "rank": 510,
       "name": "REZZ",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 511,
       "name": "Alan Walker",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 512,
       "name": "Virtual Riot",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 513,
       "name": "Zomboy",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 514,
       "name": "Liquid Stranger",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 515,
       "name": "CloZee",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 516,
       "name": "LSDREAM",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 517,
       "name": "Kill The Noise",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 518,
       "name": "Getter",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 519,
       "name": "Paul Oakenfold",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 520,
       "name": "BT",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 521,
       "name": "Cosmic Gate",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 522,
       "name": "Markus Schulz",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 523,
       "name": "Solarstone",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 524,
       "name": "SOPHIE",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 525,
       "name": "A. G. Cook",
       "aliases": [
         "AG Cook"
-      ]
+      ],
+      "weight": 0.7
     },
     {
       "rank": 526,
       "name": "Arca",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 527,
       "name": "Jlin",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 528,
       "name": "Flying Lotus",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 529,
@@ -2780,74 +3308,88 @@
       "aliases": [
         "Hudson Mohawke",
         "Lunice"
-      ]
+      ],
+      "weight": 0.7
     },
     {
       "rank": 530,
       "name": "Gerd Janson",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 531,
       "name": "Todd Terje",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 532,
       "name": "Roman Flügel",
       "aliases": [
         "Roman Flugel"
-      ]
+      ],
+      "weight": 0.7
     },
     {
       "rank": 533,
       "name": "DJ Tennis",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 534,
       "name": "Danny Tenaglia",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 535,
       "name": "Dillinja",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 536,
       "name": "Doc Scott",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 537,
       "name": "Om Unit",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 538,
       "name": "Dombresky",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 539,
       "name": "Julian Jordan",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 540,
       "name": "Mat Zo",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 541,
       "name": "Andrew Bayer",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     },
     {
       "rank": 542,
       "name": "ilan Bluestone",
-      "aliases": []
+      "aliases": [],
+      "weight": 0.7
     }
   ],
   "major_edm_festivals_worldwide": [

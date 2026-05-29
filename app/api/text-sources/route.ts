@@ -16,11 +16,13 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}))
-  const { raw_text, source_memo, source_url, source_date } = body
+  const { raw_text, source_memo, source_url, source_date, mode } = body
 
   if (!raw_text || !source_memo) {
     return NextResponse.json({ error: 'raw_text와 source_memo는 필수입니다.' }, { status: 400 })
   }
+
+  const normalizedMode = mode === 'translate' ? 'translate' : 'article'
 
   const { data, error } = await supabase
     .from('text_sources')
@@ -30,6 +32,7 @@ export async function POST(req: NextRequest) {
       source_url: source_url || null,
       source_date: source_date || null,
       status: 'pending',
+      mode: normalizedMode,
     })
     .select()
     .single()

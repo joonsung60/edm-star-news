@@ -46,7 +46,6 @@ type JobRow = {
 }
 
 async function claimNextJob(): Promise<JobRow | null> {
-  console.log('[worker] claim 시도 중...')
   const { data, error } = await supabase.rpc('claim_pending_job')
   if (error) {
     console.error('[worker] claim 실패:', error.message)

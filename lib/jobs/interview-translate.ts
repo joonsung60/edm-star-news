@@ -72,6 +72,8 @@ const anthropic = new Anthropic({
   apiKey: process.env.CLAUDE_API,
 })
 
+const MIN_INTERVIEW_SOURCE_LENGTH = 1500
+
 async function fetchArticleContent(url: string): Promise<string> {
   try {
     const res = await fetch(url, { signal: AbortSignal.timeout(10000) })
@@ -216,7 +218,7 @@ export async function interviewTranslate(
 
   let content = article.content || ''
 
-  if (!content || content.length >= 4800) {
+  if (!content || content.length < MIN_INTERVIEW_SOURCE_LENGTH || content.length >= 4800) {
     const fresh = await fetchArticleContent(article.url)
     if (fresh && fresh.length > content.length) {
       content = fresh
@@ -237,6 +239,12 @@ export async function interviewTranslate(
     .trim()
 
   if (!content || content.length < 500) {
+    console.warn('[interview] 본문 추출 실패:', {
+      rawArticleId,
+      url: article.url,
+      storedLength: article.content?.length ?? 0,
+      cleanedLength: content.length,
+    })
     throw new Error('인터뷰 본문을 추출할 수 없습니다.')
   }
 
@@ -271,7 +279,7 @@ ${content}
 `
 
   const message = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-6',
     max_tokens: 8192,
     system: SYSTEM_PROMPT_B,
     messages: [{ role: 'user', content: promptText }],
