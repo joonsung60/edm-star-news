@@ -12,6 +12,7 @@ const STASH_CANDIDATES = [
   ['app/admin', `${STASH}/app/admin`],
   ['app/api', `${STASH}/app/api`],
   ['proxy.ts', `${STASH}/proxy.ts`],
+  ['worker', `${STASH}/worker`],
 ]
 const PATHS = STASH_CANDIDATES.filter(([src]) => !STATIC_ROUTE_PATHS.has(src))
 
